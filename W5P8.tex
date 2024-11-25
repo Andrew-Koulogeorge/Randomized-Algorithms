@@ -1,0 +1,50 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 5}{Randomized Algorithms}
+
+\begin{problem}{8: Another Finger Printing Approach}
+\end{problem}
+\begin{solution} \ \\
+
+\begin{enumerate}[label=(\alph*)]
+\item Alice sends a triplet $(p, r,\bar{a})$ over to bob where $p < 4n$, $r < p$, $\bar{a} < p \implies p,r,\bar{a} < 4n \implies 3\log_{2}{4n}$ bits are needed since we need $\log_{2}{n}$ bits to store the value $n \implies O(\log_{2}{n})$ 
+\item Assume that $\textbf{a}\neq \textbf{b}$. 
+\[
+\Pr{Error} = \Pr{\bar{a} = \bar{b}} = \Pr{\bar{a}-\bar{b} = 0}
+\]
+\[
+\bar{a} = \sum_{i=1}^{n}{a_{i}r^i}~ mod~p
+\]
+\[
+\bar{b} = \sum_{i=1}^{n}{b_{i}r^i}~ mod~p
+\]
+\[
+\bar{a} - \bar{b} = \sum_{i=1}^{n}{a_{i}r^i - b_{i}r^i}~ mod~p
+ = \sum_{i=1}^{n}{r^i(a_{i} - b_{i})}~ mod~p = 0
+\]
+Let $c_i = a_i - b_i$ so $\textbf{c}  = \textbf{a} - \textbf{b}$:
+\[
+\bar{a} - \bar{b} = \sum_{i=1}^{n}{c_{i}r^i}~ mod~p = 0
+\]
+Thus, we have reduced the problem to showing that
+\[
+\Pr{c_1r + c_2r^2 + ... + c_nr^n = 0 ~ mod~p}
+\]
+is small where the randomness is taken from sampling $r\in \{0,1,...,p-1\}$ uar.
+From here, we can apply the fundamental theorem of algebra. We note that $\bar{a} - \bar{b}$ is a nonzero polynomial with degree at most $n$ since we assumed that $\textbf{a}\neq \textbf{b} \iff \exists~a_k\neq b_k \implies ~c_k\neq0$. We know that a polynomial of degree $n$ over a finite field has \textbf{at most} $n$ roots. Since the above polynomial has degree at most $n$ corresponding to the case where $c_n \neq 0$ $\implies$ the above polynomial has at most $n$ values of $r \in \{0,1,...,p-1\}$ which satisfy the equation. Since we sample $r$ uar $\implies \Pr{\text{sample a solution}} \leq \frac{n}{p}$. Since $p > 2n \implies \frac{1}{p} < \frac{1}{2n}$:
+\[
+\Pr{Error} =  \Pr{\text{sample a solution}} \leq \frac{n}{p} \leq \frac{1}{2} \qed
+\]
+\end{enumerate}
+
+
+
+\end{solution}
+
+\end{document}
+

@@ -1,0 +1,385 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 1}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Probabilistic Version of \#DNF}
+\end{problem}
+\begin{solution} \ \\
+Let $x^*$ be a random vector where each entry $x^*_i$ of $x^*$ is sampled with probability $p_i$. Its important to note that our sample space is over all bit vectors of length $n$ where each bit vector has a non uniform probability of being sampled. That is, each vector has a probability mass associated with it which equals the product of the probability of each entry occurring. Also note then that $p^* = \Pr{\phi(x^*)=1}$ where $\phi(x^*)$ is $1$ if $x^*$ satisfies at least one of the clauses in the DNF formula and $0$ otherwise. Now, let us observe the following key insights:
+\begin{itemize}
+    \item The probability that $x^*$ satisfies a clause $C_i$ in the DNF formula can be computed in linear time. We can loop over the variables in $C_i$ and keep a running product; for each literal $x_i$, if its negated we multiply our running probability by $(1-p_i)$ and otherwise by $p_i$. Thus, we can compute the probability that $x^*$ satisfies $C_i ~\forall~i$ in $O(mn)$ time where $n$ is the number of variables and $m$ is the number of clauses in our DNF. Let this probability for a particular clause $C_i$ be denoted $q_i$
+    \item Let $Q_i$ be the event that $x^*$ satisfies clause $C_i$. It then follows $x^*$ satisfies our DNF formula when it satisfies at least one of the clauses in the DNF: $p^* = \Pr{\phi(x^*)=1} = \Pr{\bigcup_{i=1}^m{Q_i}}$. By union bound, we can compute an upper bound for $p^*$: $p^* \leq \sum_{i=1}^m{\Pr{Q_i}} = \sum_{i=1}^m{q_i} = q$. 
+\end{itemize}
+First, its very important to note what probability space these probabilities are over: they are over the space of all vectors $x$ sampled with the probability masses $p_1 \dots p_n$. Later in the problem we are going to see another probability symbol which is over different space. For ease, lets define the probability a vector $x$ is sampled in this space as $w(x)$.\\
+
+Second, recall that the union bound can be a gross overestimate of the probability of a union of events occurring because it double counts the probability of events which occur simultaneously. Thus, the more clauses that a given $x^*$ satisfies, the more of an overestimate $q$ will be to $p$ and our algorithm will have to take this into account. From here, we can construct an algorithm for an unbiased estimate $\hat{p}$ for $p^*$ which has low variance. The below algorithm follows very closely the sampling algorithm seen in class for estimating \#DNF. \\
+\newpage
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{Sampler $p^*$}{}
+\State Compute upper bound on $p^* \rightarrow q = \sum_{i=1}^m{q_i}$
+\State Sample clause $C_i$ with probability $\frac{q_i}{q}$
+\State Sample $y$ s.t is satisfies $C_i$ and sample the remaining literals $y_i$ from $p_i$.
+\State Compute the number of clauses that $y$ satisfies $\rightarrow ~ N(y)$
+\State Compute estimator $\rightarrow ~ \hat{p} = \frac{q}{N(y)}$
+\State \Return{$\hat{p}$}
+
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+First, I claim that $\hat{p}$ is an unbiased estimate for $p^*$. Let U be the set of bit vectors $x$ of length $n$ such that $\phi(x) = 1$, let $Sampler(y)$ be the probability that our algorithm samples bit vector $y$ and $\hat{p}(y)$ be the value of our estimator (which is a random variable and thus a map from our sample space containing bit vectors to $\R$) for a given sample $y$. 
+\[
+\Exp{\hat{p}} = \sum_{y\in U}{\Pr{Sampler(y)}*\hat{p}(y)}
+\]
+Note that this expectation is over a new sample space; that is, the probability our algorithm samples a vector $y$ is not the same as the probability that $x^*$ is sampled. Indeed, our sampler never samples a vector which does not satisfy the DNF formula. Therefore, our algorithm induces a \textbf{new probability distribution} over the which vectors can be sampled. Now, lets take a closer look at for a fixed vector $y\in U$ what the probability our algorithm samples $y$. Let us apply the law of total probability and condition on the event of which clause $C_i$ we sample. Conditioned on which clause we sample, we can then compute the probability that $y$ is sampled. Note that we need only consider the clauses $C_j$ which $y$ is satisfies since we impose that constraint before we sample the remaining values for $y$. We denote the number of these clauses that $y$ satisfies at $N(y)$
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\Pr{Sampler(C_j)}\Pr{Sampler(y) | C_j}}
+\]
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\Pr{Sampler(y) | C_j}\frac{q_i}{q}}
+\]
+Now to roll up our sleeves: what is the probability we sample our fixed vector $y$ given we have sampled a clause which it satisfies. Note that the randomness under consideration is only over the entries of $y$ which are not present in $C_j$ since our algorithm fixes those entries deterministically. Lets define the indices in $y$ which were not set by our algorithm and whose variables are positive in $y$ as $I_{pos}$ and the indices which are negated in $y$ as $I_{pos}$. Then, the probability that we sample $y$ conditioned on $C_j$ is equal to the product of these probabilities; we are computing the chance that each of these entries was set:
+\[
+\prod_{i \in I_{pos}}{p_i}\prod_{j \in I_{neg}}{1-p_j}
+\]
+Here comes the trick; observe what occurs to this above expression if we multiple both the numerator and denominator by the probability that $y$ satisfies $C_j$:
+\[
+\frac{\prod_{i \in I_{pos}}{p_i}\prod_{j \in I_{neg}}{1-p_j} * q_i}{q_i}
+\]
+The numerator is exactly the probability of sampling $y$ in the original space discussed above where a vector is drawn from the weights of $p_1 \dots p_n$:
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\frac{w(y)}{q_i}\frac{q_i}{q}} = \frac{N(y)w(y)}{q}
+\]
+\[
+\Exp{\hat{p}} = \sum_{y\in U}{\frac{N(y)w(y)}{q}*\frac{q}{N(y)} = \sum_{y\in U}}w(y) = p^*
+\] \\
+
+Second, I claim that $\hat{p}$ has low variance:
+\[
+\Var{\hat{p}} \leq \Exp{\hat{p}^2} \leq M\Exp{\hat{p}}
+\]
+where $M$ is the max value which the random variable $\hat{p}$ can take on. Note that $q_i \leq p*$ since $p^*$ is the probability that any of the clauses are satisfied which is at least as large as the probability that exactly $1$ is satisfied. Since $N(y) \geq 1$, we have that:
+\[
+\hat{p} \leq q = \sum_{i=1}^{m}{q_i} \leq mp^* \implies M \leq mp^*
+\]
+\[
+\Var{\hat{p}} \leq mp^{*2}
+\]
+From here, since we have obtained an unbiased estimator with an estimator quality that is good ($\frac{\Var{\hat{p}}}{\Exp{\hat{p}}} \leq m)$ we can apply the boosting theorem and obtain an $(\epsilon,\delta)$ esimtator by sampling $\hat{p}$ $k = O(\frac{m log(2/\delta)}{\epsilon^2})$ times and taking the median. \qed
+\end{solution}
+
+\begin{problem}{4: Implementing Karger's \textsc{RandMC} Algorithm}
+\end{problem}
+\begin{solution} \ \\
+\begin{enumerate}[label=(\alph*)]
+\item 
+We assume access to the following two data structures:
+\begin{enumerate}[label=(\alph*)]
+    \item $deg(v)$: a dictionary which counts the number of edges incident on $v$
+    \item $A_{uv}$: an $n \times n$ matrix containing the number of edges between $u$ and $v$
+\end{enumerate}
+
+Consider the fact that $G$ is a multigraph, i.e. there may be multiple edges between the same pair of vertices. Because of this, we cannot simply select two vertices at random and return an edge between them (if one exists). However, we do have access to the number of edges between any pair of vertices via the adjacency matrix $A$. As such, our sampling procedure should, for any edge $e = \{u, v\}$, return $e$ with probability $\frac{A_{uv}}{|E|}$. For instance, if vertices $x$ and $y$ contain $s$ edges between them, then the probability we sample edge $\{x, y\}$ should be $\frac{A_{xy}}{|E|}$, where $A_{xy} = s$. With this in mind, consider the following sampling procedure. 
+
+\begin{answerbox}
+\begin{algorithmic}[1]
+\Procedure{Sample}{$deg, A$}
+\State Compute $S \gets \sum\limits_{v \in V} deg(v)$
+\State Sample vertex $u$ with probability $\frac{deg(u)}{S}$
+\State Sample a neighbor $v$ of $u$ with probability $\frac{A_{uv}}{deg(u)}$
+\State \Return{$\{u, v\}$}
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+
+We wish to show that $\textsc{Sample}$ returns an arbitrary edge $\{u, v\}$ with probability $\frac{A_{uv}}{|E|}$. First, consider the quantity $S$ computed in Line 2. Because $deg(v)$ gives us the degree of any vertex $v$, we can compute the sum of all degrees in linear time. It follows from the Handshake Lemma that
+\begin{align*}
+    S = \sum\limits_{v \in V} deg(v) = 2|E|
+\end{align*}
+Hence, the probability we sample any vertex $u$ in Line 3 is $\frac{deg(u)}{2|E|}$. Intuitively, this means we are more likely to sample vertices with higher degrees. Using the adjacency matrix $A$, we can determine all vertices adjacent to $u$ (as well as the number of edges) in linear time. Using this information, we sample a neighbor $v$ of $u$ with probability $\frac{A_{uv}}{deg(u)}$. Now, consider what needs to happen in order for our procedure to sample some edge $\{u, v\}$. This occurs if we initially sample the vertex $u$, then sample $v$, or if we initially sample $v$, then sample $u$ (since $G$ is undirected). Let $X_t$ be the event that vertex $t$ is sampled in line 3, and $Y_t$ the event that vertex $t$ is sampled in line 4. Then, we have
+\begin{align*}
+    \textbf{Pr}[\textsc{Sample} \text{ returns } \{u,v\}] &= \textbf{Pr}[X_u] \cdot \textbf{Pr}[Y_v | X_u] + \textbf{Pr}[X_v] \cdot \textbf{Pr}[Y_u | X_v] \\
+    &= \frac{deg(u)}{S} \cdot \frac{A_{uv}}{deg(u)} + \frac{deg(v)}{S} \cdot \frac{A_{vu}}{deg(v)} &\text{(by lines 3 and 4 of \textsc{Sample})} \\
+    &= \frac{A_{uv}}{S} + \frac{A_{vu}}{S} \\
+    &= \frac{2A_{uv}}{S} &\text{(because $A_{uv} = A_{vu}$)} \\
+    &= \frac{2A_{uv}}{2|E|} &\text{(because $S = 2|E|$)}\\
+    &= \frac{A_{uv}}{|E|}
+\end{align*}
+Therefore, \textsc{Sample} returns a random edge $e = \{u,v\} \in E$ with probability $\frac{A_{uv}}{|E|}$. As discussed, lines 2-4 can each individually be computed in linear time. Thus, our algorithm samples a random edge in $E$ in $O(n)$ time. 
+
+\item 
+Suppose we sampled some edge $e = \{x,y\}$ via the procedure above and contracted it in the \textsc{RandMC} algorithm. Then, we must modify both the $deg$ dictionary and the adjacency matrix $A$. Specifically, the contraction process removes $x$ and $y$ from $G$ and combines them into a supervertex $xy$. Consider the following algorithm which performs these operations in place:
+
+\begin{answerbox}
+\begin{algorithmic}[1]
+\Procedure{Update}{$deg, A, x, y$}
+\State $deg(x) \gets deg(x) + deg(y) - 2A_{xy}$
+\State $deg(y) \gets 0$
+\State $A_{xy} \gets A_{yx} \gets 0$
+\For{$u \in V$}
+\State $A_{xu} \gets A_{xu} + A_{yu}$
+\State $A_{ux} \gets A_{xu}$
+\State $A_{yu} \gets A_{uy} \gets 0$
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+In this procedure, we modify the vertex $x$ such that it has the properties of the supervertex $xy$. Specifically, the new degree of $x$ is given by $deg(x) + deg(y) - 2A_{xy}$. This ensures that the degree of $x$ accounts for all edges previously connected to $x$ as well as all edges previously connected to $y$, except for those edges connecting $x$ and $y$ ($2A_{xy}$ accounts for the fact that the edges between $x$ and $y$ contribute to both $deg(x)$ and $deg(y)$). Then, by setting $deg(y) = 0$, we effectively remove it from further consideration in the sampling process since vertices are sampled with probability proportional to their degree. Next, we zero out $A_{xy}$ and $A_{yx}$, which are the entries in the adjacency matrix associated with edges between $x$ and $y$. Then, for each vertex $u \in V$, we update the number of edges between $x$ and $u$ to include the edges between $y$ and $u$. Additionally, we update the corresponding entry $A_{ux}$ to the new value $A_{xu}$, and zero out $A_{uy}$ and $A_{yu}$. This process covers all necessary modifications to the data structures resulting from the contraction process, and requires iteration through $n$ vertices, resulting in a total time complexity of $O(n)$. Note that the size of the degree dictionary and adjacency matrix remain $n$ and $n^2$, respectively, regardless of how many times edge contraction is performed. The "removal" of vertices is mimicked by zeroing out one of the vertices associated with the newly contracted edge in both data structures, which, when considered in conjunction with our sampling algorithm, means that only the updated vertex (with its new degree and edge counts) will be sampled in future iterations of \textsc{RandMC}. Since both \textsc{Sample} and \textsc{Update} require $O(n)$ operations individually, and \textsc{RandMC} samples and contracts until only two vertices remain, the total time complexity of \textsc{RandMC} using these subroutines is $O(n^2)$.
+\end{enumerate}
+
+\end{solution}
+
+
+\begin{problem}{5: Taking Care of False Positives}
+\end{problem}
+
+\begin{solution}
+
+\begin{answerbox}
+\begin{algorithmic}[1]
+\Procedure{Sampler}{$K, \epsilon, \delta$}
+\State Sample from given importance sampling algorithm $N = \frac{S\log{2n/\delta}}{k\epsilon^2}$ times and keep an hash map of frequencies for how many times we have seen each element. 
+\State Include an element in $H$ if we sampled it at least $(1-\epsilon)\frac{NK}{S}$ times
+\State return H
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+Let us define two random variables $X$ and $Y$ where $X$ equals the number of times we sample a fixed element $x \in U~ s.t~ score(x) \geq k$ in $N$ samples and $Y$ equals the number of times we sample a fixed element $y \in U~ s.t ~score(y) < (1-\epsilon)k$. For shorthand, let us define $T = \frac{NK}{S}$. This gives us a threshold value of $T(1-\frac{\epsilon}{2})$. We wish to bound the probability that $X$ is smaller than our threshold and the probability that $Y$ is larger than the threshold. If $X$ is smaller than the threshold, that means that there existed a heavy element which we didn't include in H (bad recall) and if $Y$ is larger than the threshold that means there existed a light element which we did include (bad precision). If we can bound the probability for a single heavy element $x$ not occurring enough and bound the probability for a single light element occurring too often, then we can apply union bound and bound the overall probability of failure. \\
+
+Lets begin by computing the expected value for $X$ and $Y$. First, observe that $X$ and $Y$ can be expressed as sum of independent Bernoulli Random variables where $X_i = 1$ if the ith sample drawn from the importance sampler is $x$ and $0$ otherwise. A symmetric defining is applied to $Y$. Now observe that since we are using a given importance sampler, the probability that $x$ or $y$ is sampled using $A$ is $\frac{score(x)}{S}$ and $\frac{score(y)}{S}$ respectively. By applying the law of total expectation we can see that:
+\[
+\Exp{X} = \sum_{i=1}^{\frac{TS}{K}}{\frac{score(x)}{S}} = \frac{TS}{K}\frac{score(x)}{S} = \frac{T * score(x)}{K} \geq T
+\]
+\[
+\implies \Exp{X} \geq T
+\]
+\[
+\Exp{Y} = \sum_{i=1}^{\frac{TS}{K}}{\frac{score(y)}{S}} = \frac{TS}{K}\frac{score(y)}{S} = \frac{T * score(y)}{K} < T (1-\epsilon)
+\]
+\[
+\implies \Exp{Y} < T(1-\epsilon)
+\]
+First, lets bound the probability of $X$ being less than the threshold. Let $q = \frac{\epsilon}{2} \in (0,1)$
+\[
+\Pr{X \leq (1-q)\Exp{X}} \leq \exp{O(-q^2\Exp{X})}
+\]
+Since $\Exp{X} \geq T$:
+\[
+\Pr{X \leq (1-q)T} \leq \Pr{X \leq (1-q)\Exp{X}} \leq \exp{O(-q^2\Exp{X})}
+\]
+Plugging in for $q = \frac{\epsilon}{2}$:
+\[
+\Pr{X \leq (1-\frac{\epsilon}{2})T} \leq \exp{O(-\epsilon^2\Exp{X})} \leq \exp{O(-\epsilon^2T)}
+\]
+Thus, we have bounded the probability that a given element $x \in U$ where $score(x) \geq k$ is sampled less than our threshold. We can now take the union bound over \textbf{any} element $x$ failing in this way to obtain a bound on the probability of this mistake occurring for any element in $U$:
+\[
+\Pr{\textit{Probability that any element falls below the threshold}} \leq n\exp{O(-\epsilon^2T)}
+\]
+Note that this upper bound is pretty course since we are even considering elements that are not heavy, but it does the trick.\\
+
+Now lets apply the same procedure for the false positive case $Y$. Let $w = \frac{\epsilon}{2}$. Applying Chernoff on Y:
+\[
+\Pr{Y \geq (1+w)\Exp{Y}} \leq \exp{O(-w^2\Exp{X=Y})}
+\]
+Since $\Exp{Y} < T(1-\epsilon)$:
+\[
+\Pr{Y \geq (1-\epsilon)(1+w)T} \leq \Pr{Y \geq (1+w)\Exp{Y}} \leq \exp{O(-w^2\Exp{Y})}
+\]
+Now lets analyze how our chosen value for $w = \frac{\epsilon}{2}$ compares to the threshold value of $(1-\frac{\epsilon}{2})T$. When we plug in $w$ we get that:
+\[
+(1-\epsilon)(1+w)T = (1-\epsilon)(1+\frac{\epsilon}{2})T = (1 - \frac{\epsilon}{2} - \frac{\epsilon^2}{4})T < (1 - \frac{\epsilon}{2})T
+\]
+Since $(1-\epsilon)(1+w)T < (1 - \frac{\epsilon}{2})T$:
+\[
+\Pr{Y \geq (1 - \frac{\epsilon}{2})T} \leq \Pr{Y \geq (1-\epsilon)(1+w)T} \leq \exp{O(-\epsilon^2\Exp{Y})} \leq \exp{O(-\epsilon^2T)}
+\]
+Lastly, note that we got rid of the expectation of $Y$ in the exponent but we didn't use the same argument as the analysis with $X$. Recall from the fine print of DeepC's notes that the bounds from Chernoff still apply when $\Exp{Y}$ is upper bounded. Therefore, we substituted in $\Exp{Y} < T(1-\epsilon)$. Now, we apply union bound like we did for the false negative case to bound the bad event of an example being a false negative across all examples in $U$
+\[
+\Pr{\textit{Probability that any element falls above the threshold}} \leq n\exp{O(-\epsilon^2T)} 
+\]
+With this analysis we have shown that the probability that our algorithm fails, that is, the probability that there exists a heavy element $x \in U$ which is not in $H$ \textbf{OR} that there exists a light element $y \in U$ which is in H is bounded above by the following expression. By including either of these cases as a failure, we are able to ensure both high precision and recall with high probability. We wish to solve for the number of samples $N$ our algorithm must take from $U$ in order to ensure that the probability of failure is at most $\delta$ so lets rewrite $T$ in its form of $\frac{NK}{S}$:
+\[
+\Pr{\textit{fail}} \leq 2n\exp{O(-\epsilon^2\frac{NK}{S})} = \delta
+\]
+\[
+\implies N > \frac{S}{K} \frac{1}{\epsilon^2} \log(2n/\delta) = O(\frac{S}{K} \frac{1}{\epsilon^2} \log(n/\delta)) \qed
+\]
+
+
+
+\end{solution}
+
+\begin{problem}{7: Importance Sampler for Matrix Multiplication of Three Matrices}
+\end{problem}
+\begin{solution} \ \\
+We follow a similar procedure to what was explored in the second approach to the solution for the previous problem. First, observe that 
+\begin{align*}
+    (ABC)_{ij} = \sum\limits_{s=1}^n\sum\limits_{r=1}^n A_{ir}B_{rs}C_{sj}
+\end{align*}
+We define the score of row $s$ in matrix $C$ as 
+\begin{align*}
+    \text{score}_s^C = \sum\limits_{j = 1}^n C_{sj}
+\end{align*}
+where score$_s^C$ yields the sum of row $s$ in $C$. Now, let score$_r^B$ represent the sum of row $r$ in $B$ weighted with the corresponding score$_s^C$, i.e. 
+\begin{align*}
+    \text{score}_r^B = \sum\limits_{s=1}^n B_{rs}\cdot \text{score}_s^C
+\end{align*}
+Similarly, we let $\text{score}_i^A$ be the sum of entries in row $i$ weighted with the corresponding score$_r^B$ (which itself is weighted with a corresponding score$_s^C$), i.e. 
+\begin{align*}
+    \text{score}_i^A &= \sum\limits_{r=1}^n A_{ir} \cdot \text{score}_r^B \\
+    &= \sum\limits_{r=1}^n A_{ir} \sum\limits_{s=1}^n B_{rs} \cdot \text{score}_s^C \\
+    &= \sum\limits_{r=1}^n A_{ir} \sum\limits_{s=1}^n B_{rs} \sum\limits_{j=1}^n C_{sj} \\
+    &= \sum\limits_{r=1}^n A_{ir} \sum\limits_{j=1}^n \sum\limits_{s=1}^n B_{rs}C_{sj} \\
+    &= \sum\limits_{j=1}^n\sum\limits_{s=1}^n\sum\limits_{r=1}^n A_{ir}B_{rs}C_{sj}
+\end{align*}
+We see that score$_i^A$ is the sum of entries in row $i$ of the matrix product $ABC$. Now, we define $\Gamma(A,B,C) = \sum\limits_{i=1}^n \text{score}_{i}^A$, which is the total sum of all entries in $ABC$. With this setup, we can sample an $(i,j)$ as follows:
+\begin{enumerate}
+    \item Sample row $i$ of $A$ with probability $p(i) = \frac{\text{score}_i^A}{\Gamma(A,B,C)}$
+    \item Sample column $r$ of $A$ with probability $q_A(r|i) = \frac{A_{ir}\cdot \text{score}_r^B}{\text{score}_i^A}$
+    \item Sample column $s$ of $B$ with probability $q_B(s|r) = \frac{B_{rs} \cdot \text{score}_s^C}{\text{score}_r^B}$
+    \item Sample column $j$ of $C$ with probability $q_C(j|s) = \frac{C_{sj}}{\text{score}_s^C}$
+    \item Return $(i, j)$
+\end{enumerate}
+
+Thus, the probability of sampling $(i, j)$ is
+\begin{align*}
+    \textbf{Pr}[(i,j) \text{ is sampled}] &= p(i) \cdot \sum\limits_{s=1}^n \sum\limits_{r=1}^n q_A(r|i) \cdot q_B(s|r) \cdot q_C(j|s) \\
+    &= \frac{\text{score}_i^A}{\Gamma(A,B,C)} \cdot \sum\limits_{s=1}^n \sum\limits_{r=1}^n \frac{A_{ir}\text{score}_r^B}{\text{score}_i^A} \cdot \frac{B_{rs}\text{score}_s^C}{\text{score}_r^B} \cdot \frac{C_{sj}}{\text{score}_s^C} \\
+    &= \frac{1}{\Gamma(A,B,C)} \cdot \sum\limits_{s=1}^n \sum\limits_{r=1}^n A_{ir}B_{rs}C_{sj} \\
+    &= \frac{(ABC)_{ij}}{\Gamma(A,B,C)}
+\end{align*}
+
+which is exactly the probability proportional to $(ABC)_{ij}$. Since each of the score vectors are computed in $nnz(A)$, $nnz(B)$, and $nnz(C)$ time respectively, we have that the total time complexity of sampling an $(i,j)$ is $O(n + nnz(A) + nnz(B) + nnz(C))$.
+\end{solution}
+
+\begin{problem}{8: Estimating the number of connected components using graph queries}
+\end{problem}
+
+\begin{solution}
+\begin{enumerate}[label=(\alph*)]
+    \item Let $conn(v)$ be the number of nodes in the connected component of $G$ which contains nodes $v$. Consider a given connected component $C_k$ with $n_k$ nodes. 
+\[
+    \forall~x\in C_k, conn(x)=\frac{1}{n_k} \implies \sum_{x~\in~C_k}{\frac{1}{n_k}} = 1
+\]
+    
+    where the last equality follows from the fact that there is $n_k$ nodes in connected component $C_k$. Since each vertex in $G$ only belongs to a single connected component, we can break up the sum of $conn(x)$ across all nodes in G by which component they belong to. The following summation is really summing up the value of $1$, $C^*$ number of times: $\sum_{x\in G}{\frac{1}{conn(x)}} = C^*$
+    \item Let $\hat{est} = \frac{1}{conn(x)}$ be our estimate for the statistic $N = \frac{C^*}{n}$ where we sample $x$ from $G$ 
+    uar. Note that $n$ is the number of nodes in $G$ and $C^*$ is the number of connected components in $G$. Note that the randomness over our random variable $\hat{est}$ is only over the node we sample. 
+    \[
+    \Exp{\hat{est}} = \sum_{v\in G}{\Pr{v}\hat{est}(v)} =  \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)}} = \frac{C^*}{n}
+    \]
+    \[
+    \Exp{\hat{est}^2} = \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)^2}} \leq \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)}} = \frac{C^*}{n}
+    \]
+    \[
+    \Var{\hat{est}} = \Exp{\hat{est}^2} - \Exp{\hat{est}}^2 \leq \frac{C^*}{n} - \frac{C^{*2}}{n^2} = \frac{C^*}{n} (1 - \frac{C^*}{n})
+    \]
+    where the inequality in the computation for $\Exp{\hat{est}}^2$ follows from the fact that $\frac{1}{conn(x)} \leq 1$. We can see from the following analysis that $\hat{est}$ is unbiased and has variance which is maximized when there are twice as many nodes as components in $G$. Since our estimate is unbiased we can apply the boosting theorem for additive estimates to obtain the following samples in order to get an $(\epsilon,\delta)$ estimate:
+    \[
+    K = O(\frac{C^*}{n} (1 - \frac{C^*}{n}) \frac{1}{\epsilon^2} \log(2/\delta)
+    \]
+    \item Observe that the assumption that we have access to $conn(v)$ for all $v\in G$ is not realistic because in the worst case where we have a graph with a single component, we would have to apply a traversal algorithm to compute $conn(v)$ which would visit all nodes and edges in the graph taking $O(n + m)$ time where $m$ is the total number of edges in the graph. Instead of computing the exact value $conn(v)$, let us define an approximation $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. First, note that our approximate connectivity metric is always an underestimate ($\leq)$ of the true connectivity of node $v$ and thus $\frac{1}{conn^*(v)}$ is always an overestimate of $\frac{1}{conn^(v)}$. We wish to show that we can compute this underestimate rather quickly. We do this by executing a partial traversal of the graph $G$ with BFS:
+
+    \begin{answerbox}
+    \begin{algorithmic}[1]
+    \Procedure{BFS Variant}{$G, v, \epsilon$}
+    \State init Set "seen" 
+    \State init Queue "queue"
+    \State init count = 0 
+    \State push v onto queue; add v to seen
+    \While{queue not empty and count < $\frac{2}{\epsilon}$}: 
+        \State popleft x from queue
+        \For{y in neighbors(x) if y not in seen}:
+            \State add y to seen
+            \State $count++$
+            \State if $count \geq \frac{2}{\epsilon}$: break
+            \State push y to queue
+        \EndFor
+    \EndWhile
+    \State return count
+    \EndProcedure
+    \end{algorithmic}
+    \end{answerbox}
+    I claim that the above traversal algorithm returns $conn^*(v)$ in $O(\frac{1}{\epsilon^2})$ time. Consider the following two cases. First, if the connectivity of $v$ is less than $\frac{2}{\epsilon}$ then we will visit each node before count gets larger than $\frac{2}{\epsilon}$, our queue will become empty, and we will return $conn(v)$. Second, consider if $conn(v) > \frac{2}{\epsilon}$. Note that for any edge that is seen during this traversal, both of its endpoints are already seen by the traversal. Thus, when the count variable reaches $\frac{2}{\epsilon}$, we know that we have seen $\frac{2}{\epsilon}$ nodes which implies we have traversed at most $O(\frac{1}{\epsilon^2})$ edges since the number of edges in this sub graph is at most on the order of the number of nodes in the sub graph squared.
+    \item We wish to prove the following identity:
+    \[
+    \big| \sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}} \big| \leq \frac{n\epsilon}{2}
+    \]
+    Recall that $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. Note that we are reasoning over the entire vertex set of $G$. For each vertex $v\in G$ there are $2$ cases. If $conn(v) \leq \frac{2}{\epsilon} \implies conn^*(v) = conn(v)$. For each of the vertex's in $G$ with this property, the corresponding term will cancel out. Thus, we need only consider the case where $conn(v) > \frac{2}{\epsilon} \implies conn^*(v) = \frac{2}{\epsilon} \implies \frac{1}{conn^*(v)} = \frac{\epsilon}{2}$. WLOG, assume there are $k$ elements $x\in G$ with this property where $k$ is a natural number between $0$ and $n$. Let $K$ be the set of nodes with this property where $|K| = k$ and note that the left hand summation is always at least as large as the summation over the vanilla connectivity since $conn^*(v)$ is always an underestimate to $conn(v)$ and thus the inverse is always an overestimate. Thus, we can write the left hand side of the expression as:
+    \[
+     \big|\sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}}\big| = \sum_{v\in V}\big ({\frac{1}{conn^*(v)}} - \frac{1}{conn(v)}\big) = \sum_{x\in K}{\frac{\epsilon}{2}} - \frac{1}{conn(x)} \leq \sum_{x\in K}{\frac{\epsilon}{2}} = \frac{k\epsilon}{2} \leq \frac{n\epsilon}{2}
+    \]
+    where the last inequality follows from the fact that $k$ could be as large as n. \qed
+    \item Lastly, we wish to use our new metric $conn^*(v)$ to compute an approximate estimate to $\frac{C^*}{n}$. Let us define $\Bar{est}$ to be an estimator for $\frac{C^*}{n}$ where we randomly sample $v \in G$ and return $\frac{1}{conn^*(v)}$ where $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. Note that this new estimator is no longer unbiased; that is, its expectation is not equal to the statistic $\frac{C^*}{n}$ we are after:
+    \[
+    \Exp{\Bar{est}} = \frac{1}{n}\sum_{v\in G}{\frac{1}{conn^*(v)}}
+    \]
+    Note from part (d) however that we showed this expectation is very close to the true parameter:
+    \[
+    \sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}} \leq \frac{n\epsilon}{2} \implies \big(\Exp{\Bar{est}} - \frac{C^*}{n}\big) \leq \frac{\epsilon}{2}
+    \]
+    Where the first equality is from the result proved in part (d) and the logical implication divides both sides by $n$ so that the summations can are placed in the form of the expectation of $\Bar{est}$ and $\hat{est}$ respectively where $\hat{est}$ is unbiased yet $\Bar{est}$ is not. In words, even though $\Bar{est}$ is a biased estimator, its still very close and becomes a more accurate estimate as $\epsilon$, which is defined from the estimate $\Bar{est}$, gets smaller (and the threshold we stop the BFS search gets larger). From here, the idea is very clean. We will apply the boosting theorem on $\Bar{est}$ in order to obtain an $(\epsilon,\delta)$ estimate for $\Exp{\Bar{est}}$ which is biased but is "close" to the estimate with high probability. Its easy to show that the variance of $\Bar{est}$ is upper bounded by $1$ since $\Bar{est}$ takes on values between $1$ and $\frac{1}{n} \implies$ the additive boosting theorem tells us we need $O(\frac{1}{t^2}\log(2/\delta))$ samples in order to obtain an $(t,\delta)$ estimator. Note that for each vertex we sample, we need to compute $conn^*(v)$ which we showed can be done in $O\big(\frac{1}{\epsilon^2}\big)$ time. Let $t = \frac{\epsilon}{2}$. Then, we will need $O(\frac{1}{\epsilon^4}\log(2/\delta))$ queries, where a part of the this expression comes from the total number of nodes we need to query at random (which comes from the boosting of our biased estimator: $O(\frac{1}{\epsilon^2}\log(2/\delta))$) and the other comes from the algorithm to compute $conn^*(v)$ which needs to be run for each node $v$ and which we showed can be done in $O(\frac{1}{\epsilon^2})$. Thus, with probability at least $1-\delta$ we will have:
+    \[
+    \Bar{est} - \Exp{\Bar{est}}  \leq \frac{\epsilon}{2}
+    \]
+    \[
+    \Exp{\Bar{est}} - \frac{C^*}{n} \leq \frac{\epsilon}{2}
+    \]
+    \[
+    \implies \Bar{est}- \frac{C^*}{n} \leq \epsilon
+    \]
+    Indeed, even without an unbiased estimator, we were able to get an epsilon close additive approximation for the true statistic with probability at least $1-\delta$. \qed
+   
+    
+    
+\end{enumerate}
+\end{solution}
+
+\begin{problem}{10: Sum of Squared Degrees}
+
+\end{problem}
+\begin{solution} \ \\
+
+\begin{enumerate}[label=(\alph*)]
+    \item Let $x$ be an arbitrary vertex in $V$. We wish to determine the probability that our sampling procedure returns $x$. First, we sample an edge $(u, v) \in E$ uniformly at random. In particular, the probability we sample an edge $(u, v)$ is simply $\frac{1}{m}$, where $m$ is the number of edges. Since there are $deg(x)$ edges incident on $x$, the probability we sample any of these $deg(x)$ edges is $\frac{deg(x)}{m}$. Now, assuming that some edge containing $x$ has been sampled, we have that $x$ itself will be sampled from that edge with probability $\frac{1}{2}$. Thus, \textbf{Pr}[$x$ is sampled] = $\frac{deg(x)}{2m}$. With this, we can calculate the expectation of $Z$:
+    \begin{align*}
+        \textbf{Exp}[Z] &= \sum\limits_{v \in V} 2m \cdot deg(v) \cdot \textbf{Pr}[v \text{ is sampled}] \\
+        &= 2m \cdot \sum\limits_{v \in V} deg(v) \cdot \textbf{Pr}[v \text{ is sampled}] \\
+        &= 2m \cdot \sum\limits_{v \in V} deg(v) \cdot \frac{deg(v)}{2m} \\
+        &= 2m \cdot \frac{1}{2m} \sum\limits_{v \in V} deg(v) \cdot deg(v) \\
+        &= \sum\limits_{v \in V} deg^2(v) \\
+        &= ||deg||_2^2
+    \end{align*}
+
+     \item From the previous problem, we have that $\textbf{Exp}[Z] = \sum\limits_{v \in V} deg^2(v)$. Thus, $\textbf{Exp}[Z]^2 = \left(\sum\limits_{v \in V}deg^2(v)\right)^2$. We find $\textbf{Exp}[Z^2]$ as follows:
+    \begin{align*}
+        \textbf{Exp}[Z^2] &= \sum\limits_{v \in V} \left(2m \cdot deg(v)\right)^2 \cdot \frac{deg(v)}{2m} \\
+        &= \sum\limits_{v \in V} 4m^2 \cdot deg^2(v) \cdot \frac{deg(v)}{2m} \\
+        &= 2m \sum\limits_{v \in V} deg^3(v)
+    \end{align*}
+    We wish to show that $\frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} = O(\sqrt{n})$. Hence, we have
+    \begin{align*}
+        \frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} &= \frac{2m\sum\limits_{v \in V} deg^3(v)}{\left(\sum\limits_{v \in V}deg^2(v)\right)^2} \\
+        &\leq \frac{2m \left(\sum\limits_{v \in V}deg^{\frac{3}{\left(\frac{3}{2}\right)}}(v)\right)^{\frac{3}{2}}}{\left(\sum\limits_{v \in V}deg^2(v)\right)^2} \\
+        &= 2m \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^\frac{3}{2} \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^{-2} \\
+        &= 2m \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^{-\frac{1}{2}} \\
+        &= \frac{2m}{\sqrt{\sum\limits_{v \in V} deg^2(v)}} \\
+        &= \frac{\sum\limits_{v \in V}deg(v)}{\sqrt{\sum\limits_{v \in V}deg^2(v)}} \\
+        &\leq \frac{\sqrt{\sum\limits_{v \in V} deg^2(v)} \sqrt{\sum\limits_{v \in V} 1^2}}{\sqrt{\sum\limits_{v \in V}deg^2(v)}} \\
+        &= \sqrt{\sum\limits_{v \in V} 1} \\
+        &= \sqrt{n}
+    \end{align*}
+    Therefore, $\frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} = O(\sqrt{n})$.
+\end{enumerate}
+
+
+\end{solution}
+\end{document}
+

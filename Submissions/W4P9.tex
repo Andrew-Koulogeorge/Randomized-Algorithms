@@ -1,0 +1,80 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 4}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{9: Number of Empty Bins}
+\end{problem}
+
+\begin{solution}
+Suppose that we threw $n$ balls into $n$ bins uar and let $X$ be a random variable denoting the number of empty bins at the end of the experiment. Note that our sample space $\Omega$ contains length $n$ tuples $\omega$ where each element of the tuple $\omega_i$ represents the number of balls in the $ith$ bin. $X$ is counting the number entries $\omega_i \in \omega$ which equal $0$
+\begin{enumerate}[label=(\alph*)]
+    \item We can express $X$ as a sum of indicator random variables where $X_i=1$ if the $ith$ bin is empty after the experiment is over. Note that $X_i$ is Bernoulli random variable where $\Pr{X_i}$ is the probability that the $i$th bin is empty after $n$ balls are thrown which occurs when all $n$ independently thrown balls land in a different bin than bin $i$:
+\[
+X = \sum_{i=1}^{n}{X_i}
+\]
+\[
+\Exp{X} = \sum_{i=1}^{n}{\Exp{X_i}} = n\Exp{X_i}
+\]
+\[
+\Exp{X_i} = \Pr{X_i = 1} = \big(1-\frac{1}{n}\big)^n
+\]
+\[
+\implies \Exp{X} = n * \big(1-\frac{1}{n}\big)^n
+\]
+Note that as $n \rightarrow \infty, ~\big(1 + \frac{x}{n}\big)^n \rightarrow e^x \implies \Exp{X} \rightarrow \frac{n}{e}$ so $\Exp{X} = cn$ where $c = \frac{1}{e}$ \qed
+\item Now that we have shown the the expected number of empty bins after $n$ throws is around $\frac{n}{e}$ as $n\rightarrow~\infty$, we also want to show that the probability mass of $X$ is dense around its expected value. That is, we wish to upper bound the $\Pr{X \geq \frac{n}{2}}$ and $\Pr{X \leq \frac{n}{3}}$. Let $\mathcal{E}_1$ be the event that $X \geq \frac{n}{2}$ and $\mathcal{E}_2$ be the event that $X \leq \frac{n}{3}$. We can express $\Pr{\mathcal{E}_1}$ and $\Pr{\mathcal{E}_2}$ by defining $2$ binary function $f_1$ and $f_2$ that take in input the load random variables $L_1,L_2, ..., L_n$. $f_{1}(L_1, ..., L_n) = 1$ if at least $\frac{1}{2}$ of the load random random variables are $0$ and $f_{2}(L_1, ..., L_n) = 1$ if at most $\frac{1}{3}$ of the load variables are $0$:
+\[
+\Pr{\mathcal{E}_1} = \Pr{f_{1}(L_1, ..., L_n)=1}
+\]
+\[
+\Pr{\mathcal{E}_2} = \Pr{f_{2}(L_1, ..., L_n)=1}
+\]
+Now we wish to show that each of the events $\mathcal{E}_1$ and $\mathcal{E}_2$ are monotone as a function of $m$; that is, we wish to show that the the probability of $\mathcal{E}_1$ and $\mathcal{E}_2$ occurring as a function of the number of balls thrown is monotone. Indeed, this is true for both functions. Consider $\mathcal{E}_1$ where $f_{1}(L_1, ..., L_n)=1$ when at least $\frac{1}{2}$ of the load vectors are $0$, i.e, at least half of the bins are empty. Suppose we create a new experiment where we threw more than $m$ balls. The probability that at least $\frac{1}{2}$ of the bins are empty can only decrease with the number of balls thrown. Every time a new ball is thrown, either it lands in a bin that already has at least $1$ ball in it, or it can land in an empty bin, making the function closer to having less than $\frac{n}{2}$ bins be empty. Thus, the probability of $\mathcal{E}_1$ occurring is monotonically decreasing with $m$. The same reasoning applies to $f_2$ except $\mathcal{E}_2$ is monotonically increasing with $m$; as we throw more balls, we are more likely to have the balls fill an empty bin and thus there will be more nonzero load random variables, which will make it more likely to have at most $\frac{1}{3}$ empty bins after $m$ throws. \\
+Now that we have shown these two events are monotonic, we can apply the Poisson approximation theorem for balls and bins with monotone events:
+\[
+\Pr{\mathcal{E}_1} = \Pr{f_{1}(L_1, ..., L_n)=1} \leq 2\Pr{f_{1}(Z_1, ..., Z_n)=1}
+\]
+\[
+\Pr{\mathcal{E}_2} = \Pr{f_{2}(L_1, ..., L_n)=1} \leq 2\Pr{f_{2}(Z_1, ..., Z_n)=1}
+\]
+where $Z_i$ is a Poisson random variable with mean $\frac{n}{n} = 1$. Now we wish to compute the probability that at least $\frac{1}{2}$ of the independent Poisson random variables are $0$ and the probability that at most $\frac{1}{3}$ are $0$ respectively. The problem with taking the sum of our Poisson random variables and applying Chernoff bound on that new random variable is that the information about which bins were empty is lost. Therefore, we define a new indicator random variable $Y_i$ which equals $1$ when $Z_i =0$ and $0$ otherwise. This way $Y = \sum_{i=1}^{n}{Y_i}$ is the number of Poisson random variables which are zero which is exactly related to our indicator functions $f_1$ and $f_2$! 
+\[
+\Pr{\mathcal{E}_1} = \Pr{f_{1}(L_1, ..., L_n)=1} \leq 2\Pr{f_{1}(Z_1, ..., Z_n)=1} = 2\Pr{Y \geq \frac{n}{2}}
+\]
+\[
+\Pr{\mathcal{E}_2} = \Pr{f_{2}(L_1, ..., L_n)=1} \leq 2\Pr{f_{2}(Z_1, ..., Z_n)=1} = 2\Pr{Y \leq \frac{n}{3}}
+\]
+From here, we can apply the vanilla Chernoff bound on $Y$ using the value of $\Exp{Y}$:
+\[
+\Exp{Y} = \sum_{i=1}^{n}{\Exp{Y_i}} = n\Exp{Y_i} = n\Pr{Y_i=1} = n\Pr{Z_i=0} = \frac{n}{e}
+\]
+
+For bounding $\Pr{Y \geq \frac{n}{2}}$ let $\epsilon_1 = \frac{e}{2} - 1$ and for  bounding $\Pr{Y \leq \frac{n}{3}}$ let $\epsilon_2 = 1 - \frac{e}{3}$, where $\epsilon_1,\epsilon_2 \in (0,1)$. It follows from Chernoff that:
+\[
+\Pr{Y \geq \frac{n}{2}} \leq \exp{-\frac{n\epsilon_{1}^2}{3e}} = \exp{-O(n)}
+\]
+\[
+\Pr{Y \leq \frac{n}{3}} \leq \exp{-\frac{n\epsilon_{2}^2}{2e}} = \exp{-O(n)}
+\]
+Thus, we have bounded the probability mass slightly away from the mean! 
+\[
+\implies \Pr{X \geq \frac{n}{2}} =\Pr{\mathcal{E}_1} \leq 2\exp{-\frac{n\epsilon_{1}^2}{3e}}
+\]
+\[
+\implies \Pr{X \leq \frac{n}{3}} = \Pr{\mathcal{E}_2} \leq 2\exp{-\frac{n\epsilon_{2}^2}{2e}}
+\]
+
+\end{enumerate}
+\end{solution}
+
+
+\end{solution}
+\end{document}
+

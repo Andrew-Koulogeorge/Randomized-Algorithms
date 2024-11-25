@@ -1,0 +1,58 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 1}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Another Exercise in Union Bound} \ \\
+
+\end{problem}
+
+\begin{solution}
+We know that our randomized algorithm $A$ has the following property for any random bit vector $z$:
+\[
+\forall \textbf{z} \in \{0,1\}^n, \hspace{5pt} \underset{\textbf{r} \in \{0,1\}^n}{\textbf{Pr}}[\text{\textbf{z} fools \textbf{r}}] \leq \frac{1}{9}
+\]
+
+We wish find the smallest value for $T$, the number of random bit vectors in the set $R$ such that the probability that \textit{any} bit vector $z$  fools $R$ is at most $1$. Let $T$ be the number of random bit vectors in $R$. By definition, the probability that \textbf{z} fools R is equal to the probability that \textbf{z} fools at least half the vectors in R. 
+
+Let $X$ be a random variable such that $X$ equals the number of random vectors $r \in R$ that $z$ fools for an arbitrary $z$. Note from above that the probability that $z$ fools any random bit vector $r$ is at most $\frac{1}{9}$. Since each of the random vectors are drawn independently from each other, I claim that $X$ is a binomial random variable with the $T$ independent trails being a success if $z$ fools $r_i$ and a failure otherwise. More compactly, $X\sim\Bin(T,\frac{1}{9})$. Thus, $\Pr{z ~ fools~ R} = \Pr{X \geq \frac{T}{2}}$
+
+\[
+\Pr{X \geq \frac{T}{2}} = \sum_{k = \lceil T/2 \rceil}^{T}{\binom{T}{k} \left(\frac{1}{9}\right)^{k} \left(\frac{8}{9}\right)^{T-k}}
+\]
+First,  observe that the probability term  $\left(\frac{1}{9}\right)^{k} \left(\frac{8}{9}\right)^{T-k}$ is monotonically decreasing as $k$ goes from $0 \rightarrow T$. This implies that the largest value of $\left(\frac{1}{9}\right)^{k} \left(\frac{8}{9}\right)^{T-k}$ in the above summation is when $k=\lceil T/2 \rceil$:
+\[
+\Pr{X \geq \frac{T}{2}} \leq \sum_{k = \lceil T/2 \rceil}^{T}{\binom{T}{k} \left(\frac{1}{9}\right)^{\lceil T/2 \rceil} \left(\frac{8}{9}\right)^{\lceil T/2 \rceil}}
+\]
+
+
+Second, observe we can upper bound the number of terms in the above sum by noting that there are $2^T$ total subsets of $R$ since $|R| = T$:
+\[
+\Pr{X \geq \frac{T}{2}} \leq 2^T \left(\frac{1}{9}\right)^{\lceil T/2 \rceil} \left(\frac{8}{9}\right)^{\lceil T/2 \rceil}
+\]
+By rewriting exponents and noting that since  $\frac{8}{9} < 1$, removing it from the term makes the overall value larger:
+\[
+\Pr{X \geq \frac{T}{2}} \leq 2^T \left(\frac{1}{3}\right)^{T} = \left(\frac{2}{3}\right)^T 
+\]
+
+Now that we have bounded the probability that $z$ fools the set of bit vectors R, lets consider the probability that there exists a $z$ which fools $R$. Let $I$ be the index set containing all possible binary vectors $z$. Note that $|I| = 2^n$
+
+\[
+\Pr{\exists~z~s.t~z~fools~R} = \Pr{\bigcup_{i\in I} z_i~fools~R}
+\]
+\[
+\Pr{\exists~z~s.t~z~fools~R} \leq \sum_{i=1}^{2^n}{\Pr{z_i~fools~R}} \leq 2^n\left(\frac{2}{3}\right)^T 
+\]
+where the above implication is a result of the union bound. Note that now we are reasoning over all possible binary vectors $z$ but are random variable above applies for an arbitrary $z$. We can not solve for $T$ when bounding the above probability by $1$:
+\[
+2^n\left(\frac{2}{3}\right)^T < 1 \implies \log{2^n} + T\log{\frac{2}{3}} < \log{1} \implies n + T(1 - \log_{2}{3}) < 0 \implies T = O(n) \qed
+\]
+\end{solution}
+\clearpage
+\end{document}

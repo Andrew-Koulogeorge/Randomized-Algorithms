@@ -1,0 +1,88 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 2}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Handling Both Under and Over Estimates}
+\end{problem}
+\begin{solution} \ \\
+Suppose we use the same strategy as in Problem 1 and construct a new estimate $\hat{est}$ by taking the minimum across $m$ independent samples $est_1, est_2, ..., est_m$. In this scenario, there are two outcomes that result in us choosing a "bad" estimate: either all estimates were overestimates, or at least one estimate was an underestimate. Let $X$ and $Y$ denote these events, respectively. In particular, define 
+\begin{align*}
+    X &= \bigwedge\limits_{i=1}^m est_i \geq (1 + \epsilon)N \\
+    Y &= \bigvee\limits_{i=1}^m est_i \leq (1 - \epsilon)N
+\end{align*}
+Since each sample is chosen independently, it follows that for any $est_i$, $\textbf{Pr}[est_i \geq (1 + \epsilon)N] \leq 0.9$. Therefore,
+\begin{align*}
+    \textbf{Pr}[X] &= \prod\limits_{i=1}^m \textbf{Pr}[est_i \geq (1 + \epsilon)N] \\
+    &\leq \prod\limits_{i=1}^m 0.9 \\
+    &= 0.9^m
+\end{align*}
+Similarly, we have that $\textbf{Pr}[est_i \leq (1 - \epsilon)N] \leq 0.01$. We can apply union bound on the union of these events occurring: 
+\begin{align*}
+    \textbf{Pr}[Y] &= \sum\limits_{i=1}^m \textbf{Pr}[est_i \leq (1 - \epsilon)N] \\ 
+    &\leq \sum\limits_{i=1}^m 0.01 \\
+    &= 0.01m
+\end{align*}
+Let $Z$ be the event that, using this strategy, that $\hat{{est}}$ is either an underestimate or an overestimate. Because $X$ and $Y$ are mutually exclusive events, it follows that $\textbf{Pr}[Z] = \textbf{Pr}[X\cup Y] = \textbf{Pr}[X] + \textbf{Pr}[Y]$. From the above, we have that $\textbf{Pr}[Z] \leq 0.9^m + 0.01m$. Its important to note here what this inequality is telling us. We are bounding our algorithm's probability of failure from above by a function of $m$ that is larger than $1$ when $m > 100$, which is a vacuous statement! Unlike in most other sampling applications we have seen, the probability of failure is not monotonically decreasing as we increase the number of samples. Instead, lets consider taking the minimum of this function, which corresponds to finding the number of samples $m$ such that the bound on our our probability of failure is the tightest. Suppose $m = 20$. Then, we have
+\begin{align*}
+    \textbf{Pr}[Z] &\leq 0.9^{20} + 0.01(20) \\
+    &\approx 0.3216 \\
+    &< \frac{1}{3}
+\end{align*}
+Thus, we can say that taking the minimum of $20$ independent samples of $est$ will result in a "bad" estimate $\hat{est}$ with probability less than $\frac{1}{3}$. \\
+Lets now use $\hat{est}$ to find an even stronger estimate $est^*$ by generating $k$ independent estimates $\hat{est_1} \dots \hat{est_k}$ and taking the median of those $k$ estimates. We will follow the analysis laid out in class on boosting by DeepC closely. Note from the properties we derived from $\hat{est_i}$ that 
+\[
+\textbf{Pr}[Z] = \textbf{Pr}[\hat{est_i} \notin (1 \pm \epsilon) N] < \frac{1}{3}
+\]
+Lets define the two events $A$ and $B$ to be the events that $\hat{est_i}$ was an overestimate and underestimate respectively. Note that is if $\hat{est_i}$ is an underestimate, its surly not within our epsilon region of the mean. Same logic applies if $\hat{est_i}$ is an overestimate.From this, we can see then that:
+\[
+\textbf{Pr}[A] =\textbf{Pr}[\hat{est_i} > (1 + \epsilon) N]] \leq \textbf{Pr}[Z] \leq \frac{1}{3}
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[\hat{est_i} < (1 - \epsilon) N]] \leq \textbf{Pr}[Z] \leq \frac{1}{3}
+\]
+Now, let us define two sets of Bernoulli random variables. Let $W_i$ and $Q_i$ be two random variable that takes the value $1$ if $\hat{est_i}$ was an overestimate or $\hat{est_i}$ was an underestimate respectively. Let $W = \sum_{i=1}^k{W_i}$ and $Q = \sum_{i=1}^k{Q_i}$. By linearity of expectation, we see that $\Exp{W} = \Exp{Q} \leq \frac{k}{3}$. This tells us that the expected number of over or under estimates given $k$ samples of $\hat{est}$ is at most $\frac{k}{3}$. Recall that we wish to ensure that $est^*$ is within $\epsilon$ of the mean whp. Note that if our estimator $est^*$ is an over/underestimate of the mean, there are is at least $\frac{k}{2}$ samples of $\hat{est_i}$ to its right/left. Thus, the probability of the estimator $est^*$ being farther than $\epsilon$ from the mean is at least as large as $W$ or $Q$ being larger than $\frac{k}{2}$: (for what its worth, I am pretty sure this is an equality sign)
+\[
+ \textbf{Pr}[\hat{est_i} > (1 + \epsilon) N] \leq \textbf{Pr}[W \geq \frac{k}{2}]]
+\]
+\[
+\textbf{Pr}[\hat{est_i} < (1 - \epsilon) N]]  \leq \textbf{Pr}[Q \geq \frac{k}{2}] 
+\]
+Since $W$ and $Q$ are sums of independent Bernoulli random variables, we can apply Chernoff to bound the probability of either of them from deviating too far from their mean. 
+\[
+\textbf{Pr}[W \geq (1 + \epsilon)\Exp{W}] \leq \exp{\frac{-\epsilon^2\Exp{W}}{3}}
+\]
+\[
+\textbf{Pr}[Q \geq (1 + \epsilon)\Exp{Q}] \leq \exp{\frac{-\epsilon^2\Exp{Q}}{3}}
+\]
+Let $\epsilon=\frac{1}{2}$ and recall that the mean of $W$ and $Q$ is at most $\frac{T}{3}$
+\[
+\textbf{Pr}[W \geq \frac{T}{2}] \leq \exp{\frac{-T}{36}}
+\]
+
+\[
+\textbf{Pr}[Q \geq \frac{T}{2}] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \textbf{Pr}[A] = \textbf{Pr}[\hat{est_i} > (1 + \epsilon) N] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \textbf{Pr}[B] =\textbf{Pr}[\hat{est_i} < (1 - \epsilon) N] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \exp{\frac{-T}{36}} < \frac{\delta}{2} \implies \frac{2}{\delta} < \exp{\frac{T}{36}} \implies T = O(\log{\frac{1}{\delta}})
+\]
+Note that the event $est_i^* \notin (1 \pm \epsilon) N$ can be expressed as $\textbf{Pr}[A\cup B]$. Since $A$ and $B$ are disjoint events (an estimate cant be both an over and an under estimate at the same time):
+\[
+\textbf{Pr}[est^* \notin (1 \pm \epsilon) N] = \textbf{Pr}[A\cup B] = \textbf{Pr}[A] + \textbf{Pr}[B] < \frac{\delta}{2} +\frac{\delta}{2} = \delta
+\]
+Thus, since we have shown that $\textbf{Pr}[A]$ and $\textbf{Pr}[B]$ are bound by $\delta$ when $T = O(\log{\frac{1}{\delta}})$, we have arrived at our $(\epsilon,\delta)$ estimate. Note that we are taking $O(\log{\frac{1}{\delta}})$ number of samples of $\hat{est}$ while the question asks us to take $O(\log{\frac{1}{\delta}})$ number of samples of the original estimate $est$. Since we take a constant number of samples of $est$ to construct our "min" estimator $\hat{est}$, this does not change our number of samples asymptotically. \qed
+
+\end{solution}
+\end{document}

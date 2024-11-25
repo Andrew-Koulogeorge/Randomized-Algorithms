@@ -1,0 +1,99 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+\fancytitle{COSC 34}{Problem Set 0}{Randomized Algorithms}
+
+\begin{problem}{1: Basic Probability Check}\
+\begin{subprob}
+    \item We toss a fair coin $4$ times. What is the probability that we see at least $2$ heads ?
+    \item We toss a fair coin 100 times. What’s the probability we see exactly 50 heads? Use a calculator/computer if needed to figure the answer out.
+    \item We take a random permutation $\sigma$ of the numbers $1$ to $n$. Let $A$ be the event $\{\sigma[1] = 1\}$ and let $B$ be the event $\{\sigma[2] = 2\}$. What is $\Pr{A}$? What is $\Pr{B}$? What is $\Pr{B | A}$? Answer as a simple function of $n$. Are A and B independent?
+\end{subprob}
+\end{problem}
+
+\begin{solution} \
+\begin{subprob}
+    \item Our sample space $\Omega$ is the set of all tuples of length $4$ were entries in the tuple are either $H$ or $T$. Since the coin is fair, each element in our sample space is equally likely. The probability of seeing at least $2$ heads is the same as the probability of not seeing $1$ or $0$ heads, or $1 - \Pr{exactly ~0 \cup exactly ~1}$ = $1 - (\frac{1}{16} + \frac{4}{16}) = \frac{11}{16}$ \qed
+    \item Given a length $100$ tuple, we want to count the number of ways we can organize $50$ heads into the $100$ slots. The slots represent at which flip did we see the head. Since the coins are fair, each possible sequence of coin flips are equally likely. There are $\binom{100}{50}$ ways in which we can flip $50$ heads and since each of these sequences has a probability of $\frac{1}{2^{100}}$, we get that $\Pr{exactly ~50~ heads} =\frac{1}{2^{100}}\binom{100}{50} \approx 0.08$ \qed
+    \item Note that our sample space is sequences of length $n$ where the elements of the sequences are in $[n]$, each element is unique, and every sequence is equally likely. Thus, $\Pr{A} = \Pr{B} = \frac{1}{n}$. Given the information that the first element in the sequence is a $1$, we now are dealing with a new sample space where we only have sequences of length $n-1$ where there are only $n-1$ options $\implies \Pr{B|A} = \frac{1}{n-1}$. $A$ and $B$ are not independent since $\frac{1}{n^2} = \Pr{A}\Pr{B} \neq \Pr{A\cap B} = \Pr{B|A}\Pr{A} = \frac{1}{n(n-1)}$. In other words, knowing the information of $A$ does change our belief about the likelihood of $B$ occurring; the probability goes from $\frac{1}{n}$ to $\frac{1}{n-1}$. \qed
+\end{subprob}
+\end{solution}
+
+\clearpage
+\begin{problem}{2: Random Variables, Expectation, Variance Check}\
+\begin{subprob}
+    \item Let X be a random variable which takes value $\{-1,0,1\}$ with probability $0.2,~0.3,~0.5$ respectively. What is $\Exp{X},\Exp{X^2}, \Var{X},~\sigma_x$?
+    \item Same random variable as above. Compute $e^{\Exp{X}}$ and $\Exp{e^{X}}$
+    \item Let X and Y be two random variables which are not independent, but their expectations are $-1$ and $2$ respectively. Let $Z = X + Y$. What is $\Exp{Z}$
+    \item We take a random permutation $\sigma$ of numbers in $[n]$. What is the expected number of indices such that $\sigma[i] = i$
+\end{subprob}
+\end{problem}
+
+\begin{solution} \
+Note that $R_X$ is defined to be the support of the random variable $X$; that is, the set of values for which the random variable $X$ takes on with non zero probability.
+\begin{subprob}
+    \item By definition of expectation, $\Exp{X} = \sum_{R_X}{x\Pr{X=x}} = 0.3$. By the law of the unconscious statistician, we know that $\Exp{f(X)} = \sum_{{R_X}}{f(x)\Pr{X=x}} \implies \Exp{X^2}= \sum_{R_X}{x^2\Pr{X=x}} = 0.7$. It can be derived from the definition of the variance of a random variable that $\Var{X} = \Exp{X^2} - \Exp{X}^2 = 0.7 - 0.09 = 0.61$. $\sigma_x = \sqrt{0.61} \approx 0.78$ \qed
+    \item 
+    \[
+    e^{\Exp{X}} = e^{0.3} \approx 1.35
+    \]
+    \[
+    \Exp{e^{X}} = \sum_{R_X}{e^x\Pr{X=x}} = 0.2 \times e^{-1} + 0.3 \times 1 + 0.5 \times e^{1} \approx 1.73
+    \] \qed
+    \item By the law of linearity of expectations, we know that $\Exp{Z} = \Exp{X + Y} = \Exp{X} + \Exp{Y} = -1 + 2 = 1$. Note that this fact does not care about the two random variables being independent.
+    \item Let $X$ be the number of index's in a given permutation such that $\sigma[k] = k$ and let $X_i$ be $1$ if $\sigma[i] = i$ and $0$ otherwise. Thus, we can express the number of index's that match their value in a given random permutation as the sum of the individual index's that match: \[
+    X = \sum_{i=1}^{n}{X_i}
+    \]Since we know from the previous question that the probability any given slot value equals its index is $\frac{1}{n}$, we can take the expectation of both sides and apply the linearity of expression to this expression to get that:
+    \[\Exp{X} = \Exp{\sum_{i=1}^{n}{X_i}} = \sum_{i=1}^n{\Exp{X_i}} =\sum_{i=1}^n{\frac{1}{n}} = 1 \qed\]
+\end{subprob}
+\end{solution}
+
+\begin{problem}{3: Algorithms Check}\
+\begin{subprob}
+    \item Let $h(n)$ be the number of $\#$'s printed by $Condor(n)$. Write the recurrence inequality governing $h(n)$ and then solve it to express $h$ as $O(f)$ for a nice function $f$
+    \item We are given an array $A$ such that $A[1] \geq 0$ and $A[n] < 0$. Return an index in the array $i$ such that $A[i] \geq 0$ and $A[i+1] <0$. Write down the fastest algorithm you can think of to do this, write down the running time of your algorithm in the Big-Oh notation, and give some short reasons for correctness and runtime.
+\end{subprob}
+\end{problem}
+
+\begin{solution}\
+\begin{subprob}
+    \item We can express these two functions $Condor$ and $Eagle$ has $h(n)$ and $g(n)$ respectively. We can express the number of  $\#$'s printed by each function recursively to obtain two equations and then apply the Master's Theorem to express $h$ as being upper bounded by another function.
+    \[
+    h(n) = 2h(\frac{n}{2}) + g(\frac{n}{2})
+    \]
+    \[
+    g(n) = \Theta(n) + g(\frac{n}{2})
+    \]
+    We can apply the masters theorem to the equation for $g(n)$ to see that the number of  $\#$'s printed for each function call dominates the number printed from further instances of the function $\implies~g(n) = \Theta(n)$. Thus, we can rewrite the expression for $h(n)$ as:
+    \[
+    h(n) = 2h(\frac{n}{2}) + \Theta(n)
+    \]
+    When applying the masters theorem to this, we get that $h(n) = O(nlogn)$ \qed
+    \item Consider applying binary search to the following array $A$. Take the middle element of the $x = A[\frac{n}{2}]$. There are two cases: $x \geq 0$ or $x < 0$. If $x \geq 0$, then we can reduce the problem to considering only elements between $A[x:n]$. If $x < 0$, then we can reduce the problem to considering only elements between $A[1:x]$. In both cases, after we reduce the size of the problem by $\frac{1}{2}$, the same assumptions given to us about the input hold: the first element in the new array is non negative, and the last element is negative. We apply this operation until there is two elements left in the array, at which point we have found our $k$ and $k+1$ index's. We can express the number of operations executed by our algorithm with the following recurrence:
+    \[
+    T(n) = T(\frac{n}{2}) + \Theta(1) \implies T(n) = O(logn) \qed
+    \]
+\end{subprob}
+\end{solution}
+\clearpage
+
+\begin{problem}{4: Mathematical Analysis}\
+\begin{subprob}
+    \item For any two finite random variables $X$ and $Y$ defined over a probability space $\Omega$, prove that $\Exp{XY} \leq \sqrt{\Exp{X^2}}\sqrt{\Exp{Y^2}}$
+    \item $\forall~x\in \R~, e^x \geq 1 + x$
+\end{subprob}
+\end{problem}
+
+\begin{solution}\
+\begin{subprob} 
+    \item One idea to to try and express the expectation of the random variables as a 
+    \item TLE
+\end{subprob}
+\end{solution}
+
+\clearpage
+
+\end{document}

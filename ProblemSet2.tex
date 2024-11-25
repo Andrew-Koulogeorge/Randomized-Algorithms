@@ -1,0 +1,249 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 2}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Handling Both Under and Over Estimates}
+\end{problem}
+
+\begin{solution} \ \\
+Suppose we use the same strategy as in Problem 1 and construct a new estimate $\hat{est}$ by taking the minimum across $m$ independent samples $est_1, est_2, ..., est_m$. In this scenario, there are two outcomes that result in us choosing a "bad" estimate: either all estimates were overestimates, or at least one estimate was an underestimate. Let $X$ and $Y$ denote these events, respectively. In particular, define 
+\begin{align*}
+    X &= \bigwedge\limits_{i=1}^m est_i \geq (1 + \epsilon)N \\
+    Y &= \bigvee\limits_{i=1}^m est_i \leq (1 - \epsilon)N
+\end{align*}
+Since each sample is chosen independently, it follows that for any $est_i$, $\textbf{Pr}[est_i \geq (1 + \epsilon)N] \leq 0.9$. Therefore,
+\begin{align*}
+    \textbf{Pr}[X] &= \prod\limits_{i=1}^m \textbf{Pr}[est_i \geq (1 + \epsilon)N] \\
+    &\leq \prod\limits_{i=1}^m 0.9 \\
+    &= 0.9^m
+\end{align*}
+Similarly, we have that $\textbf{Pr}[est_i \leq (1 - \epsilon)N] \leq 0.01$. We can apply union bound on the union of these events occurring: 
+\begin{align*}
+    \textbf{Pr}[Y] &= \sum\limits_{i=1}^m \textbf{Pr}[est_i \leq (1 - \epsilon)N] \\ 
+    &\leq \sum\limits_{i=1}^m 0.01 \\
+    &= 0.01m
+\end{align*}
+Let $Z$ be the event that, using this strategy, that $\hat{{est}}$ is either an underestimate or an overestimate. Because $X$ and $Y$ are mutually exclusive events, it follows that $\textbf{Pr}[Z] = \textbf{Pr}[X\cup Y] = \textbf{Pr}[X] + \textbf{Pr}[Y]$. From the above, we have that $\textbf{Pr}[Z] \leq 0.9^m + 0.01m$. Its important to note here what this inequality is telling us. We are bounding our algorithm's probability of failure from above by a function of $m$ that is larger than $1$ when $m > 100$, which is a vacuous statement! Unlike in most other sampling applications we have seen, the probability of failure is not monotonically decreasing as we increase the number of samples. Instead, lets consider taking the minimum of this function, which corresponds to finding the number of samples $m$ such that the bound on our our probability of failure is the tightest. Suppose $m = 20$. Then, we have
+\begin{align*}
+    \textbf{Pr}[Z] &\leq 0.9^{20} + 0.01(20) \\
+    &\approx 0.3216 \\
+    &< \frac{1}{3}
+\end{align*}
+Thus, we can say that taking the minimum of $20$ independent samples of $est$ will result in a "bad" estimate $\hat{est}$ with probability less than $\frac{1}{3}$. \\
+Lets now use $\hat{est}$ to find an even stronger estimate $est^*$ by generating $k$ independent estimates $\hat{est_1} \dots \hat{est_k}$ and taking the median of those $k$ estimates. We will follow the analysis laid out in class on boosting by DeepC closely. Note from the properties we derived from $\hat{est_i}$ that 
+\[
+\textbf{Pr}[Z] = \textbf{Pr}[\hat{est_i} \notin (1 \pm \epsilon) N] < \frac{1}{3}
+\]
+Lets define the two events $A$ and $B$ to be the events that $\hat{est_i}$ was an overestimate and underestimate respectively. Note that is if $\hat{est_i}$ is an underestimate, its surly not within our epsilon region of the mean. Same logic applies if $\hat{est_i}$ is an overestimate.From this, we can see then that:
+\[
+\textbf{Pr}[A] =\textbf{Pr}[\hat{est_i} > (1 + \epsilon) N]] \leq \textbf{Pr}[Z] \leq \frac{1}{3}
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[\hat{est_i} < (1 - \epsilon) N]] \leq \textbf{Pr}[Z] \leq \frac{1}{3}
+\]
+Now, let us define two sets of Bernoulli random variables. Let $W_i$ and $Q_i$ be two random variable that takes the value $1$ if $\hat{est_i}$ was an overestimate or $\hat{est_i}$ was an underestimate respectively. Let $W = \sum_{i=1}^k{W_i}$ and $Q = \sum_{i=1}^k{Q_i}$. By linearity of expectation, we see that $\Exp{W} = \Exp{Q} \leq \frac{k}{3}$. This tells us that the expected number of over or under estimates given $k$ samples of $\hat{est}$ is at most $\frac{k}{3}$. Recall that we wish to ensure that $est^*$ is within $\epsilon$ of the mean whp. Note that if our estimator $est^*$ is an over/underestimate of the mean, there are is at least $\frac{k}{2}$ samples of $\hat{est_i}$ to its right/left. Thus, the probability of the estimator $est^*$ being farther than $\epsilon$ from the mean is at least as large as $W$ or $Q$ being larger than $\frac{k}{2}$: (for what its worth, I am pretty sure this is an equality sign)
+\[
+ \textbf{Pr}[\hat{est_i} > (1 + \epsilon) N] \leq \textbf{Pr}[W \geq \frac{k}{2}]]
+\]
+\[
+\textbf{Pr}[\hat{est_i} < (1 - \epsilon) N]]  \leq \textbf{Pr}[Q \geq \frac{k}{2}] 
+\]
+Since $W$ and $Q$ are sums of independent Bernoulli random variables, we can apply Chernoff to bound the probability of either of them from deviating too far from their mean. 
+\[
+\textbf{Pr}[W \geq (1 + \epsilon)\Exp{W}] \leq \exp{\frac{-\epsilon^2\Exp{W}}{3}}
+\]
+\[
+\textbf{Pr}[Q \geq (1 + \epsilon)\Exp{Q}] \leq \exp{\frac{-\epsilon^2\Exp{Q}}{3}}
+\]
+Let $\epsilon=\frac{1}{2}$ and recall that the mean of $W$ and $Q$ is at most $\frac{T}{3}$
+\[
+\textbf{Pr}[W \geq \frac{T}{2}] \leq \exp{\frac{-T}{36}}
+\]
+
+\[
+\textbf{Pr}[Q \geq \frac{T}{2}] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \textbf{Pr}[A] = \textbf{Pr}[\hat{est_i} > (1 + \epsilon) N] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \textbf{Pr}[B] =\textbf{Pr}[\hat{est_i} < (1 - \epsilon) N] \leq \exp{\frac{-T}{36}}
+\]
+\[
+\implies \exp{\frac{-T}{36}} < \frac{\delta}{2} \implies \frac{2}{\delta} < \exp{\frac{T}{36}} \implies T = O(\log{\frac{1}{\delta}})
+\]
+Note that the event $est_i^* \notin (1 \pm \epsilon) N$ can be expressed as $\textbf{Pr}[A\cup B]$. Since $A$ and $B$ are disjoint events (an estimate cant be both an over and an under estimate at the same time):
+\[
+\textbf{Pr}[est^* \notin (1 \pm \epsilon) N] = \textbf{Pr}[A\cup B] = \textbf{Pr}[A] + \textbf{Pr}[B] < \frac{\delta}{2} +\frac{\delta}{2} = \delta
+\]
+Thus, since we have shown that $\textbf{Pr}[A]$ and $\textbf{Pr}[B]$ are bound by $\delta$ when $T = O(\log{\frac{1}{\delta}})$, we have arrived at our $(\epsilon,\delta)$ estimate. Note that we are taking $O(\log{\frac{1}{\delta}})$ number of samples of $\hat{est}$ while the question asks us to take $O(\log{\frac{1}{\delta}})$ number of samples of the original estimate $est$. Since we take a constant number of samples of $est$ to construct our "min" estimator $\hat{est}$, this does not change our number of samples asymptotically. \qed
+\\
+\vspace{5pt}
+\textcolor{red}{break}
+\\For the sake of obtaining an upper bound, suppose $\textbf{Pr}[W = 1] = \frac{1}{3}$. Then, $\textbf{Exp}[W] = \frac{1}{3}$. Because the expected value of $W$ is exactly equal to the statistic we wish to estimate, it follows that $W$ is an unbiased estimator. Therefore, we can apply the Boosting/Median-of-Means theorem in order to find an $(\epsilon, \delta)$-estimator. Applying the theorem, we can achieve such an estimator by taking $k$ independent samples of $W$, with
+\begin{align*}
+    k = \frac{C\textbf{Var}[W]}{\textbf{Exp}[W]^2} \cdot \frac{1}{\epsilon^2} \cdot \text{ln}\left(\frac{2}{\delta}\right)
+\end{align*}
+where $C$ is some constant. Substituting our values, we have
+\begin{align*}
+    k &= \frac{C\frac{2}{9}}{\frac{1}{9}} \cdot \frac{1}{\epsilon^2} \cdot \left(\text{ln}\frac{2}{\delta}\right) \\
+    &= \frac{2C}{\epsilon^2} \cdot \text{ln}\left(\frac{2}{\delta}\right) \\
+    &= O\left(\text{ln}\left(\frac{1}{\delta}\right)\right)
+\end{align*}
+Note that each $k$ requires $20$ samples of our actual estimator. Since this is a constant factor, however, the asymptotic size of $k$ does not change.  \\
+
+
+\begin{problem}{5: The better way of estimating bias of an unknown coin}
+\end{problem}
+\begin{solution} 
+Note that the total number of tosses needed to get $N$ heads can be expressed as the number of tosses between the $i-1$th and $i$th head. Thus, we can compute $\Exp{Z} = \sum_{i=1}^{N}{Z_i} = \frac{N}{p^*}$ since each $Z_i$ is a geometric random variable with probability $p^*$ of succeeding $\implies \Exp{Z_i} = \frac{1}{p^*}$. \qed \\
+In order to prove that the probability that the number of tosses needed to get $N$ heads concentrates "close" to $\frac{N}{p^*}$, we need to connect the events related to $Z$ to events related to another random variable $X$ and $Y$ which we can represent as sums of Bernoulli random variables and thus bound their probability of deviating from the mean with Chernoff bounds. Note that its impossible to represent $Z$ itself as a sum of a finite number of Bernoulli random variables since the image of $Z$ is infinite. \\
+
+Let A be the event that $Z < (1-\epsilon)\frac{N}{p^*}$ and let B be the event that $Z > (1+\epsilon)\frac{N}{p^*}$. Note that we wish to bound $\Pr{A\cup B} = \Pr{A} + \Pr{B}$ since A and B are disjoint events. Note that the union of these two events is identical to the event that $Z$ does not lie within $\epsilon$ of its mean.\\
+
+Let $X$ be the number of heads in $\frac{(1+ \epsilon)N}{p^*}$ tosses and let $Y$ be the number of heads in $\frac{(1-\epsilon)N}{p^*}$ tosses and let $Y$ be the number of heads in $\frac{(1+ \epsilon)N}{p^*}$ tosses. We can see that $\Exp{X} = (1+\epsilon)N$ and $\Exp{Y} = (1-\epsilon)N$ since they are sums of Bernoulli random variables and we can again apply LoE.\\
+
+Now for the crux of the argument; I claim that the probability it takes less than $(1-\epsilon)\frac{N}{p^*}$ tosses to see $N$ is the same as the probability that we get at least $N$ coins in $(1-\epsilon)\frac{N}{p^*}$ tosses. The same argument applies for the over estimate case: the probability it takes more than $(1+\epsilon)\frac{N}{p^*}$ tosses to see $N$ is the same as the probability that we get less than $N$ coins in $(1+\epsilon)\frac{N}{p^*}$ tosses.
+\[
+\textbf{Pr}[A] = \textbf{Pr}[Z < (1-\epsilon)\frac{N}{p^*}] = \textbf{Pr}[Y > N]
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[Z > (1+\epsilon)\frac{N}{p^*}] = \textbf{Pr}[X <  N]
+\]
+
+Since $X$ and $Y$ are both sums of independent Bernoulli random variables, we can apply Chernoff. Let $t_x = \frac{\epsilon}{1 + \epsilon}$ and $t_y = \frac{\epsilon}{1 - \epsilon}$:
+
+\[
+\textbf{Pr}[A] = \textbf{Pr}[Y > N] = \textbf{Pr}[Y > (1+t_y)\Exp{Y}] \leq \exp{\frac{t_{y}^2\Exp{X}}{3}} = \exp{{\frac{-\epsilon^2N}{3(1 -\epsilon)}}} < \exp{{\frac{-\epsilon^2N}{3}}}
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[X <  N] = \textbf{Pr}[X < (1-t_x)\Exp{X}] \leq \exp{\frac{t_{x}^2\Exp{X}}{2}} = \exp{{\frac{-\epsilon^2N}{2(1 + \epsilon)}}} < \exp{{\frac{-\epsilon^2N}{3}}}
+\]
+where both of the last inequalities follow from the fact that $\epsilon \in (0,\frac{1}{2})$. Thus, we have shown that 
+
+\[
+\textbf{Pr}[Z \notin (1 \pm \epsilon)\Exp{Z}]=  \textbf{Pr}[A] + \textbf{Pr}[B] < 2\exp{{\frac{-\epsilon^2N}{3}}}
+\]
+\qed\\
+Qualitatively, we have now shown that if we flip our coin until we get more than $N=\frac{3}{\epsilon^2}\log{\frac{2}{\delta}} $ heads, then the number of tosses it will take will concentrate around $\Exp{Z} = \frac{N}{p^*}$ w.h.p. Note that this holds $\forall~\epsilon~\in~(0,\frac{1}{2})$. In our algorithm, we are going to restrict $\forall~\epsilon~\in~(0,\frac{1}{4})$. Note that our result in part b still holds for this restricted range of values on $\epsilon$. We can use this bound to now construct an estimator for $p^*$ which will also concentrate around the true value of $p^*$ w.h.p.
+
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{Estimate $p^*$}{$\epsilon_0$, $\delta$}
+\State Assert $\epsilon_0~\in~(0,\frac{1}{3})$
+\State $\epsilon = \frac{\epsilon_0}{1 + \epsilon_0}$ (Always less than $\frac{1}{2} \implies$ bound holds)
+\State Let $N > \frac{3}{\epsilon^2}\log{\frac{2}{\delta}}$
+
+\State Flip coin until $N$ heads appear, keeping a count of $\textbf{numFlips}$
+
+\State $\hat{p} = \frac{N}{numFlips}$
+
+\State \Return{$\hat{p}$}
+
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+By flipping our coin until we see greater than $N = \frac{3}{\epsilon^2}\log{\frac{2}{\delta}}$ heads, we know:
+\[
+\textbf{Pr}[Z \in (1 \pm \epsilon)\frac{N}{p^*}] \geq 1- \delta
+\]
+Lets define our estimate $\hat{p} = \frac{N}{Z}$. We know that with probability at least $1-\delta$ (something large)
+\[
+\implies Z \leq (1 + \epsilon)\frac{N}{p^*} ~~~\&~~~ Z \geq (1 - \epsilon)\frac{N}{p^*}
+\]
+\[
+\implies p^* \leq (1 + \epsilon)\hat{p} ~~~\&~~~ p^* \geq (1 - \epsilon)\hat{p}
+\]
+\[
+\implies \frac{1}{1 + \epsilon}p^* \leq \hat{p} ~~~\&~~~ \frac{1}{1 - \epsilon}p^* \geq \hat{p}
+\]
+Note that the above inequalities hold $\forall~\epsilon~\in~(0,\frac{1}{2})$. Lets choose $\epsilon \in (0,\frac{1}{4})$ and define $\epsilon_0 = \frac{\epsilon}{1-\epsilon}$. NOTE that we have a degree of freedom over $\epsilon$ here because we proved a result about $Z$ which holds true $\forall~\epsilon~\in~(0,\frac{1}{2})$ and so it also will hold true for a smaller subset of values for $\epsilon$. With this clever construction of $\epsilon_0$, we see that $\epsilon_0$ lies between $(0,\frac{1}{3})$:
+\[
+\epsilon = 0 \implies \epsilon_0 = \frac{\epsilon}{1 - \epsilon} = 0
+\]
+\[
+\epsilon = \frac{1}{4} \implies \epsilon_0 = \frac{\epsilon}{1 - \epsilon} = \frac{1}{3}
+\]
+Note that $\epsilon$ cant equal $0$ or $\frac{1}{4}$ exactly but this analysis shows that $\epsilon_0 \in (0,\frac{1}{3})$. Next, we see that when we restrict $\epsilon \in (0,\frac{1}{4})$, we are able to bound the region where our estimate $\hat{p}$ will lie:
+
+\[
+(1-\epsilon_0) \leq \frac{1}{1 + \epsilon}
+\]
+\[
+\epsilon = 0 \implies 1 \leq 1
+\]
+\[
+\epsilon = \frac{1}{4} \implies \frac{2}{3} \leq \frac{4}{5}
+\]
+\[
+(1+\epsilon_0) \geq \frac{1}{1 - \epsilon}
+\]
+\[
+\epsilon = 0 \implies 1 \geq 1
+\]
+\[
+\epsilon = \frac{1}{4} \implies \frac{4}{3} \geq \frac{4}{3}
+\]
+Since $p^* > 0$, we can multiply these inequalities and preserve the ordering:
+\[
+(1-\epsilon_0)p^* \leq \frac{1}{1 + \epsilon}p^* \leq \hat{p}
+\]
+\[
+(1+\epsilon_0)p^* \geq \frac{1}{1 - \epsilon}p^* \geq \hat{p}
+\]
+Since the bounds on $Z$ hold with probability $1-\delta$, our estimate $\hat{p}$ falls in this range as well for any $\epsilon_0\in (0,\frac{1}{3})$
+
+\[
+\implies (1-\epsilon_0)p^* \leq \hat{p} \leq (1+\epsilon_0)p^* \qed
+\]
+
+
+\end{solution}
+
+\begin{problem}{7: A Question of Fairness}
+\end{problem}
+\begin{solution} \ \\
+Let $X_i$ be a Bernoulli random variable that takes the value $1$ if the $i$th sample from $U$ is selected and colored azure. Similarly, let $Y_i$ be a Bernoulli random variable that takes the value $1$ if the $i$th sample from $U$ is selected and colored blue. We have
+\begin{align*}
+    \textbf{Exp}[X_i] &= 1 \cdot \frac{s}{n} \cdot \frac{1}{2} \\
+    \textbf{Exp}[Y_i] &= 1 \cdot \frac{s}{n} \cdot \frac{1}{2}
+\end{align*}
+Hence, $\textbf{Exp}[X_i] = \textbf{Exp}[Y_i] = \frac{s}{2n}$. Now, define $X$ and $Y$ to be the sum of all $X_i$ and $Y_i$, respectively. We see that this summation results in the number of azure/blue elements in our sample $R$.
+\begin{align*}
+    \textbf{Exp}[X] = \textbf{Exp}[Y] &= \sum\limits_{i=1}^n \frac{s}{2n} \\
+    &= \frac{sn}{2n} \\
+    &= \frac{s}{2}
+\end{align*}
+
+Thus, we expect to see $\frac{s}{2}$ azure elements and $\frac{s}{2}$ blue elements in $R$. Now, define $Z = |X - Y|$. By Linearity of Expectation, $\textbf{Exp}[Z] = 0$. Because $X$ and $Y$ are given by a summation of independent Bernoulli random variables, the Chernoff Bound tells us that the probability they diverge from their expectation by some factor $\epsilon$ decays exponentially in $\epsilon$. Now, consider what needs to happen for $Z$ to be greater than or equal to some value $t$. In the general case, $X$ must diverge from its expectation by at least $\frac{t}{q}$ for some $1 \leq q \leq t$, and $Y$ must diverge (in the opposite direction as $X$) by $t - \frac{t}{q}$. Of course, this is not the only possible way for $Z$ to be greater than $t$ (for instance, $X = \textbf{Exp}[X] + 2t$ and $Y = \textbf{Exp}[Y] + t$), but Chernoff asserts that the probability of these events occurring are orders of magnitude smaller than the variations that may occur closer to the expectations of $X$ and $Y$. In particular, the Chernoff Bound says that $X$ and $Y$ are heavily concentrated around their means. This implies that, due to the Chernoff-induced decay in probability as $t$ increases, the case in which $X$ and $Y$ individually diverge from their means by the \textit{smallest} amount (while still maintaining the property that $|X - Y| \geq t$) is exponentially more likely than any other case. In other words, this "minimal" event alone yields an asymptotically identical bound to the summation across all events that result in $|X - Y| \geq t$. This occurs precisely when $X \geq \textbf{Exp}[X] + \frac{t}{2}$ and $Y \leq \textbf{Exp}[Y] - \frac{t}{2}$, or vice versa. 
+\begin{align*}
+    \textbf{Pr}[Z \geq t] &\approx \textbf{Pr}[X \geq \textbf{Exp}[X] + \frac{t}{2} \text{ and } Y \leq \textbf{Exp}[Y] - \frac{t}{2}] \\
+    &= \textbf{Pr}[X \geq \textbf{Exp}[X] + \frac{t}{2}] \cdot \textbf{Pr}[Y \leq \textbf{Exp}[Y] - \frac{t}{2}]  &\text{(since $X$ and $Y$ are independent)}
+\end{align*}
+Suppose we fix $\epsilon = \frac{t}{s}$. Then, substituting our values into the Chernoff Bound, we have
+
+\begin{align*}
+    \textbf{Pr}[X \geq (1 + \frac{t}{s})\frac{s}{2}] \cdot \textbf{Pr}[Y \leq (1 - \frac{t}{s})\frac{s}{2}] &\leq \exp{-\frac{\left(\frac{t}{s}\right)^2\frac{s}{2}}{3}} \cdot \exp{-\frac{\left(\frac{t}{s}\right)^2\frac{s}{2}}{3}} \\
+    \textbf{Pr}[X \geq \frac{s}{2} + \frac{t}{2}] \cdot \textbf{Pr}[Y \leq \frac{s}{2} - \frac{t}{2}] &\leq \exp{-\frac{2 \cdot \left(\frac{t}{s}\right)^2\frac{s}{2}}{3}} \\
+    &= \exp{-\frac{\frac{t^2}{s^2} \cdot s}{3}} \\
+    &= \exp{-\frac{t^2}{3s}}
+\end{align*}
+Since we want this probability to be less than $\delta$, we have
+\begin{align*}
+    \exp{-\frac{t^2}{3s}} &< \delta \\
+    -\frac{t^2}{3s} &< \text{ln}(\delta) \\
+    t^2 &< -3s \cdot \text{ln}(\delta) \\
+    t &< \sqrt{3s \cdot \text{ln}\left(\frac{1}{\delta}\right)} \\
+    t &= O\left(\sqrt{s \cdot \text{ln}\left(\frac{1}{\delta}\right)}\right) \\
+\end{align*}
+
+Therefore, we have shown that $\textbf{Pr}[Z \geq t]$ becomes smaller than $\delta$ when $t$ is of size $O\left(\sqrt{s \cdot \text{ln}\left(\frac{1}{\delta}\right)}\right)$.
+\end{solution}
+\end{document}

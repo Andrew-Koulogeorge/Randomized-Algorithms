@@ -1,0 +1,83 @@
+\documentclass[12pt]{article}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\usepackage{lipsum}
+
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 7}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: A Better Analysis of \textsc{Count-Sketch}}
+    
+\end{problem}
+\begin{solution} \ \\
+    In the \textsc{Count-Sketch} framework, suppose we define $H$ to be the set of elements $i$ with the $\ceil{\frac{1}{\epsilon^2}}$-largest $\textbf{f}_i$'s. Let $L := [n] \backslash H$ represent the long tail of low frequency elements. Then, define
+    \begin{align*}
+        ||\textbf{f}||_{tail} = \sqrt{\sum\limits_{i \in L}\textbf{f}_i^2}
+    \end{align*}
+    We wish to improve the bound given in class by showing that 
+    \begin{align*}
+        \textbf{Pr}[|\hat{\textbf{f}}_i - \textbf{f}_i| \geq \epsilon ||\textbf{f}||_{tail}] \leq \frac{1}{3}
+    \end{align*}
+    To begin, suppose we fix $i \in [n]$. Then, by the analysis given in class, we have that the entry in the counter table $C$ at index $h(i)$, where $h$ is drawn independently from a UHF with domain size $[n]$ and range $k$, is given by
+    \begin{align*}
+        C[h(i)] = g(i) \cdot \textbf{f}_i + \sum\limits_{j \neq i:h(j) = h(i)} g(j) \cdot \textbf{f}_j
+    \end{align*}
+    Also note that $g$ is drawn from a strongly independent UHF with domain size $[n]$ and range $\{-1, 1\}$. Then, since our estimate $\hat{\textbf{f}}_i$ is equivalent to $C[h(i)] \cdot g(i)$, we have
+    \begin{align*}
+        &\hat{\textbf{f}}_i = g(i) \cdot (g(i) \cdot \textbf{f}_i + \sum\limits_{j \neq i:h(j) = h(i)} g(j) \cdot \textbf{f}_j)\\
+        &= \textbf{f}_i + \sum\limits_{j \neq i:h(j) = h(i)} g(i)g(j) \cdot \textbf{f}_j 
+    \end{align*}
+    Intuitively, this represents our ground truth value $\textbf{f}_i$ in addition to some error terms that may occur due to hash collisions. Since $H$ and $L$ are disjoint, we can split this summation over collisions into those that occur in $H$ and those that occur in $L$:
+    \begin{align*}
+        &\hat{\textbf{f}}_i = \textbf{f}_i + \sum\limits_{j \neq i \in H: h(j) = h(i)} g(i)g(j)\textbf{f}_j + \sum\limits_{k \neq i \in L: h(k) = h(i)} g(i)g(k)\textbf{f}_k \\
+        \implies &\hat{\textbf{f}}_i - \textbf{f}_i = \sum\limits_{j \neq i \in H: h(j) = h(i)} g(i)g(j)\textbf{f}_j + \sum\limits_{k \neq i \in L: h(k) = h(i)} g(i)g(k)\textbf{f}_k
+    \end{align*}
+    Let $A$ be a random variable that takes the value of the summation over $H$, and $B$ a random variable that takes the value of the summation over $L$. First, note that $\textbf{Exp}[A] = \textbf{Exp}[B] = 0$ due to the fact that $\textbf{Exp}[g(i)g(j)] = 0$ for any $j \neq i$. We now calculate the variance of $B$:
+    \begin{align*}
+        \textbf{Var}[B] &= \textbf{Exp}[B^2] - \textbf{Exp}[B]^2 \\
+        &= \textbf{Exp}[B^2] \\
+        &= \sum\limits_{j \neq i \in H} \textbf{Pr}[h(j) = h(i)] \cdot g(i)^2g(j)^2\textbf{f}_j^2 \\
+        &\leq \sum\limits_{j \neq i \in H} \frac{1}{k} \cdot \textbf{f}_j^2 \\
+        &= \frac{||f||_{tail}^2}{k} \\ 
+    \end{align*}
+    Then, applying Chebyshev with $t = \epsilon ||\textbf{f}||_{tail}$, we have
+    \begin{align*}
+        \textbf{Pr}[|B| \geq \epsilon ||\textbf{f}||_{tail}] &\leq \frac{||\textbf{f}||_{tail}^2}{k\epsilon^2||\textbf{f}||_{tail}^2} \\
+        &= \frac{1}{10}
+    \end{align*}
+    where the last step follows with $k = \frac{10}{\epsilon^2}$. Thus, we have bounded the probability that the magnitude of error accumulated by collisions from $L$ exceeds $\epsilon||\textbf{f}||_{tail}$. Now, consider $A$. Trivially, the probability that $A \geq \epsilon ||\textbf{f}||_{tail}$ can be no greater than the probability that some element in $H$ collides with $i$. More generally, we have that
+    \begin{align*}
+        \textbf{Pr}[|A| \geq \epsilon||\textbf{f}||_{tail}] \leq \textbf{Pr}[A \neq 0]
+    \end{align*}
+    Since the only case in which $A$ is nonzero is when there exists some element $j \in H$ such that $h(j) = h(i)$, we can apply a union bound over the probability that a hash collision occurs in $H$:
+    \begin{align*}
+        \textbf{Pr}[A \neq 0] &\leq \textbf{Pr}[\exists j \in H: h(j) = h(i)] \\
+        &\leq \sum\limits_{j \in H} \frac{1}{k} \\
+        &= \frac{1}{k\epsilon^2} \\
+        &= \frac{1}{10}
+    \end{align*}
+    Therefore, we have that $\textbf{Pr}[|A| \geq \epsilon||\textbf{f}||_{tail}]$ and $\textbf{Pr}[|B| \geq \epsilon||\textbf{f}||_{tail}]$ are both at most $\frac{1}{10}$. Now, let $\mathcal{E}$ denote the event that $|\hat{\textbf{f}}_i - \textbf{f}_i| \geq \epsilon||\textbf{f}||_{tail}$. Suppose $A = 0$, then the only case in which $\mathcal{E}$ occurs is when $|B| \geq \epsilon||\textbf{f}||_{tail}$. Similarly, suppose $|B| < \epsilon||\textbf{f}||_{tail}$. Then, it is impossible for $\mathcal{E}$ to occur unless $A \neq 0$. Thus, it follows that
+    \begin{align*}
+        \textbf{Pr}[\mathcal{E}] &\leq \textbf{Pr}[A \neq 0 \lor |B| \geq \epsilon||\textbf{f}||_{tail}] \\
+        &\leq \textbf{Pr}[A \neq 0] + \textbf{Pr}[|B| \geq \epsilon||\textbf{f}||_{tail}] \\
+        &= \frac{1}{10} + \frac{1}{10} \\
+        &= \frac{1}{5}
+    \end{align*}
+    Hence, \textsc{Count-Sketch} with $k \leq \frac{10}{\epsilon^2}$ satisfies 
+    \begin{align*}
+          \textbf{Pr}[|\hat{\textbf{f}}_i - \textbf{f}_i| \geq \epsilon ||\textbf{f}||_{tail}] \leq \frac{1}{3}
+    \end{align*}
+    for every $i \in [n]$.
+\end{solution}
+
+
+
+\end{document}
+

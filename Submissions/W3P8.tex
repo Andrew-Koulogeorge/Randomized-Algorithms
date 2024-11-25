@@ -1,0 +1,99 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 3}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{8: Estimating the number of connected components using graph queries}
+\end{problem}
+
+\begin{solution}
+\begin{enumerate}[label=(\alph*)]
+    \item Let $conn(v)$ be the number of nodes in the connected component of $G$ which contains nodes $v$. Consider a given connected component $C_k$ with $n_k$ nodes. 
+\[
+    \forall~x\in C_k, conn(x)=\frac{1}{n_k} \implies \sum_{x~\in~C_k}{\frac{1}{n_k}} = 1
+\]
+    
+    where the last equality follows from the fact that there is $n_k$ nodes in connected component $C_k$. Since each vertex in $G$ only belongs to a single connected component, we can break up the sum of $conn(x)$ across all nodes in G by which component they belong to. The following summation is really summing up the value of $1$, $C^*$ number of times: $\sum_{x\in G}{\frac{1}{conn(x)}} = C^*$
+    \item Let $\hat{est} = \frac{1}{conn(x)}$ be our estimate for the statistic $N = \frac{C^*}{n}$ where we sample $x$ from $G$ 
+    uar. Note that $n$ is the number of nodes in $G$ and $C^*$ is the number of connected components in $G$. Note that the randomness over our random variable $\hat{est}$ is only over the node we sample. 
+    \[
+    \Exp{\hat{est}} = \sum_{v\in G}{\Pr{v}\hat{est}(v)} =  \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)}} = \frac{C^*}{n}
+    \]
+    \[
+    \Exp{\hat{est}^2} = \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)^2}} \leq \frac{1}{n}\sum_{v\in G}{\frac{1}{conn(v)}} = \frac{C^*}{n}
+    \]
+    \[
+    \Var{\hat{est}} = \Exp{\hat{est}^2} - \Exp{\hat{est}}^2 \leq \frac{C^*}{n} - \frac{C^{*2}}{n^2} = \frac{C^*}{n} (1 - \frac{C^*}{n})
+    \]
+    where the inequality in the computation for $\Exp{\hat{est}}^2$ follows from the fact that $\frac{1}{conn(x)} \leq 1$. We can see from the following analysis that $\hat{est}$ is unbiased and has variance which is maximized when there are twice as many nodes as components in $G$. Since our estimate is unbiased we can apply the boosting theorem for additive estimates to obtain the following samples in order to get an $(\epsilon,\delta)$ estimate:
+    \[
+    K = O(\frac{C^*}{n} (1 - \frac{C^*}{n}) \frac{1}{\epsilon^2} \log(2/\delta)
+    \]
+    \item Observe that the assumption that we have access to $conn(v)$ for all $v\in G$ is not realistic because in the worst case where we have a graph with a single component, we would have to apply a traversal algorithm to compute $conn(v)$ which would visit all nodes and edges in the graph taking $O(n + m)$ time where $m$ is the total number of edges in the graph. Instead of computing the exact value $conn(v)$, let us define an approximation $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. First, note that our approximate connectivity metric is always an underestimate ($\leq)$ of the true connectivity of node $v$ and thus $\frac{1}{conn^*(v)}$ is always an overestimate of $\frac{1}{conn^(v)}$. We wish to show that we can compute this underestimate rather quickly. We do this by executing a partial traversal of the graph $G$ with BFS:
+
+    \begin{answerbox}
+    \begin{algorithmic}[1]
+    \Procedure{BFS Variant}{$G, v, \epsilon$}
+    \State init Set "seen" 
+    \State init Queue "queue"
+    \State init count = 0 
+    \State push v onto queue; add v to seen
+    \While{queue not empty and count < $\frac{2}{\epsilon}$}: 
+        \State popleft x from queue
+        \For{y in neighbors(x) if y not in seen}:
+            \State add y to seen
+            \State $count++$
+            \State if $count \geq \frac{2}{\epsilon}$: break
+            \State push y to queue
+        \EndFor
+    \EndWhile
+    \State return count
+    \EndProcedure
+    \end{algorithmic}
+    \end{answerbox}
+    I claim that the above traversal algorithm returns $conn^*(v)$ in $O(\frac{1}{\epsilon^2})$ time. Consider the following two cases. First, if the connectivity of $v$ is less than $\frac{2}{\epsilon}$ then we will visit each node before count gets larger than $\frac{2}{\epsilon}$, our queue will become empty, and we will return $conn(v)$. Second, consider if $conn(v) > \frac{2}{\epsilon}$. Note that for any edge that is seen during this traversal, both of its endpoints are already seen by the traversal. Thus, when the count variable reaches $\frac{2}{\epsilon}$, we know that we have seen $\frac{2}{\epsilon}$ nodes which implies we have traversed at most $O(\frac{1}{\epsilon^2})$ edges since the number of edges in this sub graph is at most on the order of the number of nodes in the sub graph squared.
+    \item We wish to prove the following identity:
+    \[
+    \big| \sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}} \big| \leq \frac{n\epsilon}{2}
+    \]
+    Recall that $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. Note that we are reasoning over the entire vertex set of $G$. For each vertex $v\in G$ there are $2$ cases. If $conn(v) \leq \frac{2}{\epsilon} \implies conn^*(v) = conn(v)$. For each of the vertex's in $G$ with this property, the corresponding term will cancel out. Thus, we need only consider the case where $conn(v) > \frac{2}{\epsilon} \implies conn^*(v) = \frac{2}{\epsilon} \implies \frac{1}{conn^*(v)} = \frac{\epsilon}{2}$. WLOG, assume there are $k$ elements $x\in G$ with this property where $k$ is a natural number between $0$ and $n$. Let $K$ be the set of nodes with this property where $|K| = k$ and note that the left hand summation is always at least as large as the summation over the vanilla connectivity since $conn^*(v)$ is always an underestimate to $conn(v)$ and thus the inverse is always an overestimate. Thus, we can write the left hand side of the expression as:
+    \[
+     \big|\sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}}\big| = \sum_{v\in V}\big ({\frac{1}{conn^*(v)}} - \frac{1}{conn(v)}\big) = \sum_{x\in K}{\frac{\epsilon}{2}} - \frac{1}{conn(x)} \leq \sum_{x\in K}{\frac{\epsilon}{2}} = \frac{k\epsilon}{2} \leq \frac{n\epsilon}{2}
+    \]
+    where the last inequality follows from the fact that $k$ could be as large as n. \qed
+    \item Lastly, we wish to use our new metric $conn^*(v)$ to compute an approximate estimate to $\frac{C^*}{n}$. Let us define $\Bar{est}$ to be an estimator for $\frac{C^*}{n}$ where we randomly sample $v \in G$ and return $\frac{1}{conn^*(v)}$ where $conn^*(v) = min(conn(v), \frac{2}{\epsilon})$. Note that this new estimator is no longer unbiased; that is, its expectation is not equal to the statistic $\frac{C^*}{n}$ we are after:
+    \[
+    \Exp{\Bar{est}} = \frac{1}{n}\sum_{v\in G}{\frac{1}{conn^*(v)}}
+    \]
+    Note from part (d) however that we showed this expectation is very close to the true parameter:
+    \[
+    \sum_{v\in V}{\frac{1}{conn^*(v)}} - \sum_{v\in V}{\frac{1}{conn(v)}} \leq \frac{n\epsilon}{2} \implies \big(\Exp{\Bar{est}} - \frac{C^*}{n}\big) \leq \frac{\epsilon}{2}
+    \]
+    Where the first equality is from the result proved in part (d) and the logical implication divides both sides by $n$ so that the summations can are placed in the form of the expectation of $\Bar{est}$ and $\hat{est}$ respectively where $\hat{est}$ is unbiased yet $\Bar{est}$ is not. In words, even though $\Bar{est}$ is a biased estimator, its still very close and becomes a more accurate estimate as $\epsilon$, which is defined from the estimate $\Bar{est}$, gets smaller (and the threshold we stop the BFS search gets larger). From here, the idea is very clean. We will apply the boosting theorem on $\Bar{est}$ in order to obtain an $(\epsilon,\delta)$ estimate for $\Exp{\Bar{est}}$ which is biased but is "close" to the estimate with high probability. Its easy to show that the variance of $\Bar{est}$ is upper bounded by $1$ since $\Bar{est}$ takes on values between $1$ and $\frac{1}{n} \implies$ the additive boosting theorem tells us we need $O(\frac{1}{t^2}\log(2/\delta))$ samples in order to obtain an $(t,\delta)$ estimator. Note that for each vertex we sample, we need to compute $conn^*(v)$ which we showed can be done in $O\big(\frac{1}{\epsilon^2}\big)$ time. Let $t = \frac{\epsilon}{2}$. Then, we will need $O(\frac{1}{\epsilon^4}\log(2/\delta))$ queries, where a part of the this expression comes from the total number of nodes we need to query at random (which comes from the boosting of our biased estimator: $O(\frac{1}{\epsilon^2}\log(2/\delta))$) and the other comes from the algorithm to compute $conn^*(v)$ which needs to be run for each node $v$ and which we showed can be done in $O(\frac{1}{\epsilon^2})$. Thus, with probability at least $1-\delta$ we will have:
+    \[
+    \Bar{est} - \Exp{\Bar{est}}  \leq \frac{\epsilon}{2}
+    \]
+    \[
+    \Exp{\Bar{est}} - \frac{C^*}{n} \leq \frac{\epsilon}{2}
+    \]
+    \[
+    \implies \Bar{est}- \frac{C^*}{n} \leq \epsilon
+    \]
+    Indeed, even without an unbiased estimator, we were able to get an epsilon close additive approximation for the true statistic with probability at least $1-\delta$. \qed
+   
+    
+    
+\end{enumerate}
+\end{solution}
+
+
+
+
+\end{document}
+

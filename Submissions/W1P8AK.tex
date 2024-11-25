@@ -1,0 +1,57 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 1}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{8: Quick Select}
+\end{problem}
+\begin{solution} \ \\
+    \begin{subprob}
+        \item On any iteration, the while loop breaks if the \textsc{Pivot} method partitions $A$ into two arrays $(A_1, A_2)$ such that $\frac{n}{3} \leq \textbf{len}(A_1) \leq \frac{2n}{3}$. Because $A$ has distinct elements, the randomly selected $q \in A[1 : n]$ must lie in the middle third of the sorted version of $A$ in order for the loop to break. In other words, there are $\frac{n}{3}$ candidates for selection that result in the loop's termination. Because each element of $A$ may be selected by the \textsc{Random} method with equal probability, it follows that on any iteration, the while loop breaks with probability $\frac{1}{3}$.  Let $X$ be a random variable that indicates the number of times the while loop runs. Clearly, the loop is guaranteed to run at least once for $k > 1$. The probability that the loop runs twice is the probability that it did not break on the first iteration, but does break on the second iteration. More generally, we can express the expected number of while loop iterations as 
+        \begin{align*}
+            \textbf{Exp}[X] &= \sum\limits_{i=0}^{\infty} \frac{i}{3} \left(\frac{2}{3}\right)^{i-1} \\
+                     \textbf{Exp}[X] &= \frac{1}{3} \cdot \sum\limits_{i=0}^{\infty} i \cdot \left(\frac{2}{3}\right)^{i-1} \\
+                     3 \cdot \textbf{Exp}[X] &= \sum\limits_{i=0}^{\infty} i \cdot \left(\frac{2}{3}\right)^{i-1}
+        \end{align*}
+        Now, consider the following property of a convergent geometric series. For any $0 < x < 1$, 
+        \[
+        \sum\limits_{i=0}^{\infty}x^i = \frac{1}{1-x}
+        \]
+        Differentiating both sides with respect to $x$, we have
+        \[
+        \sum\limits_{i=0}^{\infty}i \cdot x^{i-1} = \frac{1}{(1-x)^2}
+        \]
+        With $x=\frac{2}{3}$, this is exactly the summation that describes the expected value of our random variable $X$. Using this identity, it follows that
+        \begin{align*}
+            3 \cdot \textbf{Exp}[X] &= \frac{1}{(1 - \frac{2}{3})^2} \\
+            3 \cdot \textbf{Exp}[X] &= 9 \\
+            \textbf{Exp}[X] &= 3
+        \end{align*}
+        We expect that, on any \textsc{QuickSelect} call with $k > 1$, the while loop runs $3$ times. Because the \textsc{Pivot} function makes no more than $n$ comparisons, the expected number of comparisons made in the while loop can be bounded at $3n$. Note that this derivation agrees with the probability theory. Our random variable X is computing the number of independent trails before we see a successful event, where in our application the independent events are sampling from $[n]$ and a successful trial is picking an element in the array which lies middle third. This good event occurs with probability $\frac{1}{3}$. Thus, X is a geometric random variable with $p=\frac{1}{3}$ and we know the mean of these random variables is $\Exp{X}=\frac{1}{p}$ = 3 \qed
+
+        \item $T(n)$ is defined as:
+        \[
+        T(n) := \underset{A[1:n]}{\text{max}} \hspace{3pt }\textbf{Exp}[T_Q(A)]
+        \]
+        where $T_Q(A)$ is the number of comparisons on array $A$ by Quick Select. Note that we care only about the array $A$ that results in a maximum expected value for $T_Q(A)$. In other words, we are looking for the worst case number of comparisons across any $A$. First, observe that for an array of length $n$, the size of the subarray passed to any recursive call to \textsc{QuickSelect} can be no greater than $\frac{2n}{3}$. This is due to the fact that the initial while loop does not terminate until we select a pivot $q$ whose index in the sorted array lies in $[\frac{n}{3}, \frac{2n}{3}]$. In the worst case, $q$ lies at exactly $\frac{n}{3}$ and the $k$th smallest element is greater than $q$, or $q$ lies at exactly $\frac{2n}{3}$ and the $k$th smallest element is less than $q$. Hence, we can upper bound the total expected number of comparisons by assuming that one of these two cases always occurs. Let $T(m) = T(2n/3)$. Then, $T(n) \leq T(m) + 3n$, where $T(m)$ captures the worst recursive case and $3n$ is the expected number of comparisons made within the while loop. Expanding this out, we have
+        \begin{align*}
+        T(n) &\leq 3n + 3\left(\frac{2n}{3}\right) + 3\left(\frac{4n}{9}\right) + 3\left(\frac{8n}{27}\right) + ... \\
+             &\leq \sum\limits_{i=0}^{\infty} 3n \cdot \left(\frac{2}{3}\right)^i \\
+             &= 3n \cdot \sum\limits_{i=0}^{\infty} \left(\frac{2}{3}\right)^i
+        \end{align*}
+        Again, we have a convergent geometric series:
+        \begin{align*}
+            3n \cdot \sum\limits_{i=0}^{\infty}\left(\frac{2}{3}\right)^i &= \frac{3n}{1-\frac{2}{3}} \\
+            &= 9n
+        \end{align*}
+        Thus, we can say that the expected worst case number of comparisons made by \textsc{QuickSelect} on an array of size $\leq n$ is at most $9n$, i.e $T(n) \leq 9n$. \qed
+         
+    \end{subprob}
+\end{solution}
+\end{document}

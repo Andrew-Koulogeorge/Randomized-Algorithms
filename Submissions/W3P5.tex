@@ -1,0 +1,90 @@
+\usepackage{lipsum}
+\documentclass[12pt]{article}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 3}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{5: Taking Care of False Positives}
+\end{problem}
+
+\begin{solution}
+
+\begin{answerbox}
+\begin{algorithmic}[1]
+\Procedure{Sampler}{$K, \epsilon, \delta$}
+\State Sample from given importance sampling algorithm $N = \frac{S\log{2n/\delta}}{k\epsilon^2}$ times and keep an hash map of frequencies for how many times we have seen each element. 
+\State Include an element in $H$ if we sampled it at least $(1-\epsilon)\frac{NK}{S}$ times
+\State return H
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+Let us define two random variables $X$ and $Y$ where $X$ equals the number of times we sample a fixed element $x \in U~ s.t~ score(x) \geq k$ in $N$ samples and $Y$ equals the number of times we sample a fixed element $y \in U~ s.t ~score(y) < (1-\epsilon)k$. For shorthand, let us define $T = \frac{NK}{S}$. This gives us a threshold value of $T(1-\frac{\epsilon}{2})$. We wish to bound the probability that $X$ is smaller than our threshold and the probability that $Y$ is larger than the threshold. If $X$ is smaller than the threshold, that means that there existed a heavy element which we didn't include in H (bad recall) and if $Y$ is larger than the threshold that means there existed a light element which we did include (bad precision). If we can bound the probability for a single heavy element $x$ not occurring enough and bound the probability for a single light element occurring too often, then we can apply union bound and bound the overall probability of failure. \\
+
+Lets begin by computing the expected value for $X$ and $Y$. First, observe that $X$ and $Y$ can be expressed as sum of independent Bernoulli Random variables where $X_i = 1$ if the ith sample drawn from the importance sampler is $x$ and $0$ otherwise. A symmetric defining is applied to $Y$. Now observe that since we are using a given importance sampler, the probability that $x$ or $y$ is sampled using $A$ is $\frac{score(x)}{S}$ and $\frac{score(y)}{S}$ respectively. By applying the law of total expectation we can see that:
+\[
+\Exp{X} = \sum_{i=1}^{\frac{TS}{K}}{\frac{score(x)}{S}} = \frac{TS}{K}\frac{score(x)}{S} = \frac{T * score(x)}{K} \geq T
+\]
+\[
+\implies \Exp{X} \geq T
+\]
+\[
+\Exp{Y} = \sum_{i=1}^{\frac{TS}{K}}{\frac{score(y)}{S}} = \frac{TS}{K}\frac{score(y)}{S} = \frac{T * score(y)}{K} < T (1-\epsilon)
+\]
+\[
+\implies \Exp{Y} < T(1-\epsilon)
+\]
+First, lets bound the probability of $X$ being less than the threshold. Let $q = \frac{\epsilon}{2} \in (0,1)$
+\[
+\Pr{X \leq (1-q)\Exp{X}} \leq \exp{O(-q^2\Exp{X})}
+\]
+Since $\Exp{X} \geq T$:
+\[
+\Pr{X \leq (1-q)T} \leq \Pr{X \leq (1-q)\Exp{X}} \leq \exp{O(-q^2\Exp{X})}
+\]
+Plugging in for $q = \frac{\epsilon}{2}$:
+\[
+\Pr{X \leq (1-\frac{\epsilon}{2})T} \leq \exp{O(-\epsilon^2\Exp{X})} \leq \exp{O(-\epsilon^2T)}
+\]
+Thus, we have bounded the probability that a given element $x \in U$ where $score(x) \geq k$ is sampled less than our threshold. We can now take the union bound over \textbf{any} element $x$ failing in this way to obtain a bound on the probability of this mistake occurring for any element in $U$:
+\[
+\Pr{\textit{Probability that any element falls below the threshold}} \leq n\exp{O(-\epsilon^2T)}
+\]
+Note that this upper bound is pretty course since we are even considering elements that are not heavy, but it does the trick.\\
+
+Now lets apply the same procedure for the false positive case $Y$. Let $w = \frac{\epsilon}{2}$. Applying Chernoff on Y:
+\[
+\Pr{Y \geq (1+w)\Exp{Y}} \leq \exp{O(-w^2\Exp{X=Y})}
+\]
+Since $\Exp{Y} < T(1-\epsilon)$:
+\[
+\Pr{Y \geq (1-\epsilon)(1+w)T} \leq \Pr{Y \geq (1+w)\Exp{Y}} \leq \exp{O(-w^2\Exp{Y})}
+\]
+Now lets analyze how our chosen value for $w = \frac{\epsilon}{2}$ compares to the threshold value of $(1-\frac{\epsilon}{2})T$. When we plug in $w$ we get that:
+\[
+(1-\epsilon)(1+w)T = (1-\epsilon)(1+\frac{\epsilon}{2})T = (1 - \frac{\epsilon}{2} - \frac{\epsilon^2}{4})T < (1 - \frac{\epsilon}{2})T
+\]
+Since $(1-\epsilon)(1+w)T < (1 - \frac{\epsilon}{2})T$:
+\[
+\Pr{Y \geq (1 - \frac{\epsilon}{2})T} \leq \Pr{Y \geq (1-\epsilon)(1+w)T} \leq \exp{O(-\epsilon^2\Exp{Y})} \leq \exp{O(-\epsilon^2T)}
+\]
+Lastly, note that we got rid of the expectation of $Y$ in the exponent but we didn't use the same argument as the analysis with $X$. Recall from the fine print of DeepC's notes that the bounds from Chernoff still apply when $\Exp{Y}$ is upper bounded. Therefore, we substituted in $\Exp{Y} < T(1-\epsilon)$. Now, we apply union bound like we did for the false negative case to bound the bad event of an example being a false negative across all examples in $U$
+\[
+\Pr{\textit{Probability that any element falls above the threshold}} \leq n\exp{O(-\epsilon^2T)} 
+\]
+With this analysis we have shown that the probability that our algorithm fails, that is, the probability that there exists a heavy element $x \in U$ which is not in $H$ \textbf{OR} that there exists a light element $y \in U$ which is in H is bounded above by the following expression. By including either of these cases as a failure, we are able to ensure both high precision and recall with high probability. We wish to solve for the number of samples $N$ our algorithm must take from $U$ in order to ensure that the probability of failure is at most $\delta$ so lets rewrite $T$ in its form of $\frac{NK}{S}$:
+\[
+\Pr{\textit{fail}} \leq 2n\exp{O(-\epsilon^2\frac{NK}{S})} = \delta
+\]
+\[
+\implies N > \frac{S}{K} \frac{1}{\epsilon^2} \log(2n/\delta) = O(\frac{S}{K} \frac{1}{\epsilon^2} \log(n/\delta)) \qed
+\]
+
+
+
+\end{solution}
+\end{document}

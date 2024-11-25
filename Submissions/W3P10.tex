@@ -1,0 +1,51 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 3}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{10: Sum of Squared Degrees}
+
+\end{problem}
+\begin{solution} \ \\
+
+\begin{enumerate}[label=(\alph*)]
+    \item Let $x$ be an arbitrary vertex in $V$. We wish to determine the probability that our sampling procedure returns $x$. First, we sample an edge $(u, v) \in E$ uniformly at random. In particular, the probability we sample an edge $(u, v)$ is simply $\frac{1}{m}$, where $m$ is the number of edges. Since there are $deg(x)$ edges incident on $x$, the probability we sample any of these $deg(x)$ edges is $\frac{deg(x)}{m}$. Now, assuming that some edge containing $x$ has been sampled, we have that $x$ itself will be sampled from that edge with probability $\frac{1}{2}$. Thus, \textbf{Pr}[$x$ is sampled] = $\frac{deg(x)}{2m}$. With this, we can calculate the expectation of $Z$:
+    \begin{align*}
+        \textbf{Exp}[Z] &= \sum\limits_{v \in V} 2m \cdot deg(v) \cdot \textbf{Pr}[v \text{ is sampled}] \\
+        &= 2m \cdot \sum\limits_{v \in V} deg(v) \cdot \textbf{Pr}[v \text{ is sampled}] \\
+        &= 2m \cdot \sum\limits_{v \in V} deg(v) \cdot \frac{deg(v)}{2m} \\
+        &= 2m \cdot \frac{1}{2m} \sum\limits_{v \in V} deg(v) \cdot deg(v) \\
+        &= \sum\limits_{v \in V} deg^2(v) \\
+        &= ||deg||_2^2
+    \end{align*}
+     \item From the previous problem, we have that $\textbf{Exp}[Z] = \sum\limits_{v \in V} deg^2(v)$. Thus, $\textbf{Exp}[Z]^2 = \left(\sum\limits_{v \in V}deg^2(v)\right)^2$. We find $\textbf{Exp}[Z^2]$ as follows:
+    \begin{align*}
+        \textbf{Exp}[Z^2] &= \sum\limits_{v \in V} \left(2m \cdot deg(v)\right)^2 \cdot \frac{deg(v)}{2m} \\
+        &= \sum\limits_{v \in V} 4m^2 \cdot deg^2(v) \cdot \frac{deg(v)}{2m} \\
+        &= 2m \sum\limits_{v \in V} deg^3(v)
+    \end{align*}
+    We wish to show that $\frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} = O(\sqrt{n})$. Hence, we have
+    \begin{align*}
+        \frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} &= \frac{2m\sum\limits_{v \in V} deg^3(v)}{\left(\sum\limits_{v \in V}deg^2(v)\right)^2} \\
+        &\leq \frac{2m \left(\sum\limits_{v \in V}deg^{\frac{3}{\left(\frac{3}{2}\right)}}(v)\right)^{\frac{3}{2}}}{\left(\sum\limits_{v \in V}deg^2(v)\right)^2} \\
+        &= 2m \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^\frac{3}{2} \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^{-2} \\
+        &= 2m \cdot \left(\sum\limits_{v \in V}deg^2(v)\right)^{-\frac{1}{2}} \\
+        &= \frac{2m}{\sqrt{\sum\limits_{v \in V} deg^2(v)}} \\
+        &= \frac{\sum\limits_{v \in V}deg(v)}{\sqrt{\sum\limits_{v \in V}deg^2(v)}} \\
+        &\leq \frac{\sqrt{\sum\limits_{v \in V} deg^2(v)} \sqrt{\sum\limits_{v \in V} 1^2}}{\sqrt{\sum\limits_{v \in V}deg^2(v)}} \\
+        &= \sqrt{\sum\limits_{v \in V} 1} \\
+        &= \sqrt{n}
+    \end{align*}
+    Therefore, $\frac{\textbf{Exp}[Z^2]}{\textbf{Exp}[Z]^2} = O(\sqrt{n})$.
+\end{enumerate}
+
+
+\end{solution}
+\end{document}
+

@@ -1,0 +1,77 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 3}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Probabilistic Version of \#DNF}
+\end{problem}
+\begin{solution} \ \\
+Let $x^*$ be a random vector where each entry $x^*_i$ of $x^*$ is sampled with probability $p_i$. Its important to note that our sample space is over all bit vectors of length $n$ where each bit vector has a non uniform probability of being sampled. That is, each vector has a probability mass associated with it which equals the product of the probability of each entry occurring. Also note then that $p^* = \Pr{\phi(x^*)=1}$ where $\phi(x^*)$ is $1$ if $x^*$ satisfies at least one of the clauses in the DNF formula and $0$ otherwise. Now, let us observe the following key insights:
+\begin{itemize}
+    \item The probability that $x^*$ satisfies a clause $C_i$ in the DNF formula can be computed in linear time. We can loop over the variables in $C_i$ and keep a running product; for each literal $x_i$, if its negated we multiply our running probability by $(1-p_i)$ and otherwise by $p_i$. Thus, we can compute the probability that $x^*$ satisfies $C_i ~\forall~i$ in $O(mn)$ time where $n$ is the number of variables and $m$ is the number of clauses in our DNF. Let this probability for a particular clause $C_i$ be denoted $q_i$
+    \item Let $Q_i$ be the event that $x^*$ satisfies clause $C_i$. It then follows $x^*$ satisfies our DNF formula when it satisfies at least one of the clauses in the DNF: $p^* = \Pr{\phi(x^*)=1} = \Pr{\bigcup_{i=1}^m{Q_i}}$. By union bound, we can compute an upper bound for $p^*$: $p^* \leq \sum_{i=1}^m{\Pr{Q_i}} = \sum_{i=1}^m{q_i} = q$. 
+\end{itemize}
+First, its very important to note what probability space these probabilities are over: they are over the space of all vectors $x$ sampled with the probability masses $p_1 \dots p_n$. Later in the problem we are going to see another probability symbol which is over different space. For ease, lets define the probability a vector $x$ is sampled in this space as $w(x)$.\\
+
+Second, recall that the union bound can be a gross overestimate of the probability of a union of events occurring because it double counts the probability of events which occur simultaneously. Thus, the more clauses that a given $x^*$ satisfies, the more of an overestimate $q$ will be to $p$ and our algorithm will have to take this into account. From here, we can construct an algorithm for an unbiased estimate $\hat{p}$ for $p^*$ which has low variance. The below algorithm follows very closely the sampling algorithm seen in class for estimating \#DNF. \\
+\newpage
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{Sampler $p^*$}{}
+\State Compute upper bound on $p^* \rightarrow q = \sum_{i=1}^m{q_i}$
+\State Sample clause $C_i$ with probability $\frac{q_i}{q}$
+\State Sample $y$ s.t is satisfies $C_i$ and sample the remaining literals $y_i$ from $p_i$.
+\State Compute the number of clauses that $y$ satisfies $\rightarrow ~ N(y)$
+\State Compute estimator $\rightarrow ~ \hat{p} = \frac{q}{N(y)}$
+\State \Return{$\hat{p}$}
+
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+First, I claim that $\hat{p}$ is an unbiased estimate for $p^*$. Let U be the set of bit vectors $x$ of length $n$ such that $\phi(x) = 1$, let $Sampler(y)$ be the probability that our algorithm samples bit vector $y$ and $\hat{p}(y)$ be the value of our estimator (which is a random variable and thus a map from our sample space containing bit vectors to $\R$) for a given sample $y$. 
+\[
+\Exp{\hat{p}} = \sum_{y\in U}{\Pr{Sampler(y)}*\hat{p}(y)}
+\]
+Note that this expectation is over a new sample space; that is, the probability our algorithm samples a vector $y$ is not the same as the probability that $x^*$ is sampled. Indeed, our sampler never samples a vector which does not satisfy the DNF formula. Therefore, our algorithm induces a \textbf{new probability distribution} over the which vectors can be sampled. Now, lets take a closer look at for a fixed vector $y\in U$ what the probability our algorithm samples $y$. Let us apply the law of total probability and condition on the event of which clause $C_i$ we sample. Conditioned on which clause we sample, we can then compute the probability that $y$ is sampled. Note that we need only consider the clauses $C_j$ which $y$ is satisfies since we impose that constraint before we sample the remaining values for $y$. We denote the number of these clauses that $y$ satisfies at $N(y)$
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\Pr{Sampler(C_j)}\Pr{Sampler(y) | C_j}}
+\]
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\Pr{Sampler(y) | C_j}\frac{q_i}{q}}
+\]
+Now to roll up our sleeves: what is the probability we sample our fixed vector $y$ given we have sampled a clause which it satisfies. Note that the randomness under consideration is only over the entries of $y$ which are not present in $C_j$ since our algorithm fixes those entries deterministically. Lets define the indices in $y$ which were not set by our algorithm and whose variables are positive in $y$ as $I_{pos}$ and the indices which are negated in $y$ as $I_{pos}$. Then, the probability that we sample $y$ conditioned on $C_j$ is equal to the product of these probabilities; we are computing the chance that each of these entries was set:
+\[
+\prod_{i \in I_{pos}}{p_i}\prod_{j \in I_{neg}}{1-p_j}
+\]
+Here comes the trick; observe what occurs to this above expression if we multiple both the numerator and denominator by the probability that $y$ satisfies $C_j$:
+\[
+\frac{\prod_{i \in I_{pos}}{p_i}\prod_{j \in I_{neg}}{1-p_j} * q_i}{q_i}
+\]
+The numerator is exactly the probability of sampling $y$ in the original space discussed above where a vector is drawn from the weights of $p_1 \dots p_n$:
+\[
+\Pr{Sampler(y)} = \sum_{C_j}{\frac{w(y)}{q_i}\frac{q_i}{q}} = \frac{N(y)w(y)}{q}
+\]
+\[
+\Exp{\hat{p}} = \sum_{y\in U}{\frac{N(y)w(y)}{q}*\frac{q}{N(y)} = \sum_{y\in U}}w(y) = p^*
+\] \\
+
+Second, I claim that $\hat{p}$ has low variance:
+\[
+\Var{\hat{p}} \leq \Exp{\hat{p}^2} \leq M\Exp{\hat{p}}
+\]
+where $M$ is the max value which the random variable $\hat{p}$ can take on. Note that $q_i \leq p*$ since $p^*$ is the probability that any of the clauses are satisfied which is at least as large as the probability that exactly $1$ is satisfied. Since $N(y) \geq 1$, we have that:
+\[
+\hat{p} \leq q = \sum_{i=1}^{m}{q_i} \leq mp^* \implies M \leq mp^*
+\]
+\[
+\Var{\hat{p}} \leq mp^{*2}
+\]
+From here, since we have obtained an unbiased estimator with an estimator quality that is good ($\frac{\Var{\hat{p}}}{\Exp{\hat{p}}^2} \leq m)$ we can apply the boosting theorem and obtain an $(\epsilon,\delta)$ estimator by sampling $\hat{p}$ $k = O(\frac{m log(2/\delta)}{\epsilon^2})$ times and taking the median. \qed
+\end{solution}
+\end{document}

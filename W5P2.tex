@@ -1,0 +1,59 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 5}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{2: Comparing Multisets}
+\end{problem}
+\begin{solution} \ \\
+
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{Compare}{$S_1, S_2$}
+    \State compute $n_1 = |S_1|$
+    \State sample $h \in H$ such that $h: N \rightarrow [n_1]$
+    \For{$x \in S_1$}
+        \State $j = h(x)$
+        \State Search for $x \in T[j]$:
+        \If{found}
+            \State increment data to $(x, \text{freq}(x) + 1)$
+        \Else
+            \State store $(x, 1)$
+        \EndIf
+    \EndFor
+    \For{$y \in S_2$}
+        \State $k = h(y)$
+        \State Search for $y \in T[k]$: 
+        \If{found}
+            \State decrement tuple to $(y, \text{freq}(y) - 1)$
+            \If{$\text{freq}(y) - 1 = 0$}
+                \State delete from list
+            \EndIf
+        \Else
+            \State \Return False
+        \EndIf
+    \EndFor
+    \State \Return $True$ if $T$ empty else $False$
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+\textbf{Correctness:} $(1)$: \textbf{Suppose $S_1$ and $S_2$ are equal multisets} $Compare(S_1,S_2)$ we will hash each distinct element of $S_1$ along with its frequency, $(x,freq(x))$, into $T$. As we loop over each element of $S_2$, we will decrement the frequency of each value we see. Since the two multisets are identical, after the second loop terminates $T$ will be empty and we will return True. $(2)$: \textbf{Suppose $S_1 \neq S_2$}. If $S_1$ contains an element that $S_2$ does not then $T$ will not be empty after the $2$nd loop and $Compare(S_1,S_2)$ will return False. If $S_2$ contains an element that $S_1$ does not then we will not find it in $T$ during the second loop and $Compare(S_1,S_2)$ will return $False$.\\
+
+\textbf{Runtime:} Since we have a single table $T$ where each element of $T$ stores a linked-list of ordered pairs $(x,freq(x)$, it suffices to show that $\forall~x\in S_1~\Exp{|T(h(x))|}$ is a constant after hashing all the elements from $S_1$ into $T$. This will ensure that each of our searches for $x\in T[j]$ and $y\in T[k]$ will be done in constant amount of time. This analysis is nearly identical to the analysis done in the previous problem. Let $X_{x,y}=1$ if $h(x) = h(y)$ and $0$ otherwise. It follows that:
+\[
+|T(h(x))| = \sum_{y\in S_1}{X_{x,y}} = 1 + \sum_{y\in S_1 ~ y\neq x}{X_{x,y}}
+\]
+\[
+\Exp{|T(h(x))|} = 1 + \sum_{y\in S_1 ~ y\neq x}{\Pr{h(x) = h(y)}} \leq 1 + \frac{n_1-1}{n_1} \leq 2
+\]
+The first line follows from the definition of $|T(h(x))|$: elements $y$ are stored in the linked list at index $h(x)$ if $h(y) = h(x)$. When applying the expectation, there are at most $n_1$ distinct elements in $S_1$ and each of them has at most a probability of $\frac{1}{n_1}$ by the properties of the UHF. Note that this analysis upper bounds the expected size of $|T(h(x))|$ after we hashed all of $S_1$, which acts as an upper bound for each iteration of both the first loop over $S_1$ and the second loop over $S_2$. This is because in between the two loops the size of the table is maximized, as we are increasing the size of $T$ during the first loop and decreasing the size of the $T$ during the second loop. Thus, we know the expected size of each linked list of $T$ during our search is constant. Applying this upper bound to the loops over $S_1$ and $S_2$, we see that the total time taken is expected $O(n_1 + n_2)$. Computing $n_1 = |S_1|$ at the start of the algorithm is a deterministic computation and takes $O(n_1)$. At the end of the algorithm we loop over each element of $T$ and ensure that it contains all $0$s which takes $O(n_1)$. Thus, the expected runtime is $O(3n_1 + n_2) = O(n)$ where $n = n_1 + n_2$
+
+\end{solution}
+
+\end{document}

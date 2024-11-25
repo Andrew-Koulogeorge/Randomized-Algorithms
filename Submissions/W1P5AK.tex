@@ -1,0 +1,72 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 1}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+
+\begin{problem}{5: Checking Matrix Multiplication}
+\end{problem}
+
+\begin{solution} \ \\
+    
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{CheckMatMul}{$n \times n$ matrices $A$, $B$, and $C$}
+\State $r \gets \text{$n$ random bits from $\{0,1\}$}$
+\State $D_r \gets A(Br)$
+\State $C_r \gets Cr$
+\State \Return{$D_r = C_r$}
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+
+\begin{itemize}
+    \item \textbf{Runtime}: \\
+    Observe that $r$ is a bit vector of size $n$. As a result, the matrix-vector product $Br$ is a vector of size $n$, where the $i$th entry in $Br$ is given by $\sum\limits_{k=1}^n B_{ik}r_k$. This operation requires a summation over $n$ for each $i \in [n]$, resulting in a total of $n^2$ operations. By the same logic, $A(Br)$ and $Cr$ require $n^2$ additions. This results in two vectors $D_r = A(Br)$ and $C_r = Cr$, both of length $n$. Thus, the final equality check between $D_r$ and $C_r$ requires $n$ comparisons. Let $T(n)$ denote the number of operations made by \textsc{CheckMatMul}($A, B, C$) with each $A,B,C$ of dimensions $n \times n$. It follows that $T(n) = 3n^2 + n = O(n^2)$.
+    \item \textbf{Correctness}: \\
+    First, consider the case where $AB = C$. Here, we are effectively computing whether $Cr = Cr$, which is clearly true for any $r$. Hence, our algorithm has the property that $\textbf{Pr}[\textsc{CheckMatMul}(A,B,C) \text{ is correct} \hspace{2pt}|\hspace{2pt} AB = C] = 1$. In other words, our algorithm has no false negatives. \\
+    
+    Now, lets consider the case when $AB \neq C$. We want to bound the probability that our algorithm makes an error. That is, we want to bound the probability that \textsc{CheckMatMul}(A,B,C) \text{returns True} given $AB \neq C$. If we can bound the probability of this event, because we have shown that our algorithm has no false negatives, we can then apply boosting to achieve an error of any $\delta > 0$ 
+
+
+    \[
+    ABr = Cr \implies (AB-C)r = 0
+    \]
+    Following the method used by DeepC in class in the equality checking problem, let $Z = AB-C$. Thus, we are interested in the probability of
+    \[
+    \Pr{Zr = 0} = \Pr{\bigcap_{i=1}^n z^i \cdot x = 0}
+    \]
+    where $z^i$ represents the rows of the matrix $Z$. By assumption, $Z \neq 0$ since $AB \neq C$. Since $Z$ is not the zero matrix $\exists$ a row vector $z^k$ of $Z$ such that $z^k \neq 0$. Let us now consider only the probability of this row vector $z^k \cdot x = 0$ instead of all row vectors in $Z$:
+    \[
+    \Pr{Zr = 0} = \Pr{\bigcap_{i=1}^n z^i \cdot x = 0} \leq \Pr{z^k \cdot x = 0}
+    \]
+    Let us define the above event as $A$. We then want to understand:
+    \[
+    \Pr{A} = \Pr{\sum_{i=1}^n{z^{k}_{i}x_i} = 0}
+    \]
+    We proceed by following the argument that DeepC made in class. Since this row vector $z^k$ is nonzero, we can say wlog that $z_1 \neq 0$. Let us now define $X = z_1r_1$ and $Y=\sum_{i=2}^n{z^{k}_{i}x_i}$. By applying the law of total probability and conditioning on the values of the random variable $Y$, we see that:
+    \[
+    \Pr{A} = \Pr{A|Y=0}\Pr{Y=0} + \Pr{A|Y\neq0}\Pr{Y\neq0}
+    \]
+    First, observe that if we condition on $Y=0$ then $A$ can only occur when $z_1r_1 =0$ which occurs if and only if $r_1=0$, which occurs with probability $\frac{1}{2}$, since we assumed that $z_1 \neq 0$. Second, recall that given an event $X$, $\Pr{X} +\Pr{\overline{X}} = 1$. We can apply this to the two events where $Y=0$ and $Y\neq0$ and define $\Pr{Y=0} = q$ and $\Pr{Y\neq0} = 1-q$. Third, note that if we condition on $Y\neq0$ then $A$ can only occur when  $z_1r_1 =-Y$. Note here the important distinction about what is random in this problem and what isn't. $z_1$ is NOT a random variable; indeed, it is an arbitrary and fixed element which could be chosen by our worst adversary. $r_1$, however, is random. Therefore, we must consider the various cases on the values in which $z_1$ can take on:
+    \begin{itemize}
+        \item If $z_1 \neq -Y$, then $\Pr{A|Y\neq 0} = 0$ since no value of $r_1$ will make $z_1r_1=-Y$
+        \item If $z_1 = -Y$, then $\Pr{A|Y\neq 0} = \frac{1}{2}$ since $z_1r_1=-Y \iff r_1=1$ which occurs with probability = $\frac{1}{2}$
+    \end{itemize}
+    
+    Thus, for any input we can say that $\Pr{A|Y\neq0} \leq \frac{1}{2}$. Putting these $3$ arguments together, we see that:
+    \[
+    \Pr{Error} = \Pr{Zr=0} = \Pr{A} \leq \frac{1}{2}q + \frac{1}{2}(1-q) \leq \frac{1}{2}
+    \]
+    Now that we have shown that we have bounded the probability of error for false positives and have shown our algorithm makes no false negative errors, we can apply boosting to our algorithm. We sample $k$ random vectors and check $ABx = Cx$ for each of the $k$ random vectors $x$. If all of the $k$ of the resulting vectors are equal then our algorithm will return True and it will return False otherwise. The probability of failure for this boosted algorithm is $\frac{1}{2^k}$ since the probability of failing is equal to the probability our algorithm fails for all $k$ random vectors (each sampled independently) where the probability of failing for a given random vector is at most $\frac{1}{2}$ \qed
+    
+\end{itemize}
+\end{solution}
+
+\end{document}

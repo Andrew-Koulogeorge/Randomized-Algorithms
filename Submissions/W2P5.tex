@@ -1,0 +1,118 @@
+\documentclass[12pt]{article}
+\usepackage{lipsum}
+\input{macros}
+\everymath{\displaystyle}
+
+\begin{document}
+
+\fancytitle{COSC 34}{Problem Set 2}{Randomized Algorithms}
+
+Collaboration Statement: Andrew Koulogeorge and Eric Richardson 
+
+\begin{problem}{5: The better way of estimating bias of an unknown coin}
+\end{problem}
+\begin{solution} 
+Note that the total number of tosses needed to get $N$ heads can be expressed as the number of tosses between the $i-1$th and $i$th head. Thus, we can compute $\Exp{Z} = \sum_{i=1}^{N}{Z_i} = \frac{N}{p^*}$ since each $Z_i$ is a geometric random variable with probability $p^*$ of succeeding $\implies \Exp{Z_i} = \frac{1}{p^*}$. \qed \\
+In order to prove that the probability that the number of tosses needed to get $N$ heads concentrates "close" to $\frac{N}{p^*}$, we need to connect the events related to $Z$ to events related to another random variable $X$ and $Y$ which we can represent as sums of Bernoulli random variables and thus bound their probability of deviating from the mean with Chernoff bounds. Note that its impossible to represent $Z$ itself as a sum of a finite number of Bernoulli random variables since the image of $Z$ is infinite. \\
+
+Let A be the event that $Z < (1-\epsilon)\frac{N}{p^*}$ and let B be the event that $Z > (1+\epsilon)\frac{N}{p^*}$. Note that we wish to bound $\Pr{A\cup B} = \Pr{A} + \Pr{B}$ since A and B are disjoint events. Note that the union of these two events is identical to the event that $Z$ does not lie within $\epsilon$ of its mean.\\
+
+Let $X$ be the number of heads in $\frac{(1+ \epsilon)N}{p^*}$ tosses and let $Y$ be the number of heads in $\frac{(1-\epsilon)N}{p^*}$ tosses and let $Y$ be the number of heads in $\frac{(1+ \epsilon)N}{p^*}$ tosses. We can see that $\Exp{X} = (1+\epsilon)N$ and $\Exp{Y} = (1-\epsilon)N$ since they are sums of Bernoulli random variables and we can again apply LoE.\\
+
+Now for the crux of the argument; I claim that the probability it takes less than $(1-\epsilon)\frac{N}{p^*}$ tosses to see $N$ is the same as the probability that we get at least $N$ coins in $(1-\epsilon)\frac{N}{p^*}$ tosses. The same argument applies for the over estimate case: the probability it takes more than $(1+\epsilon)\frac{N}{p^*}$ tosses to see $N$ is the same as the probability that we get less than $N$ coins in $(1+\epsilon)\frac{N}{p^*}$ tosses.
+\[
+\textbf{Pr}[A] = \textbf{Pr}[Z < (1-\epsilon)\frac{N}{p^*}] = \textbf{Pr}[Y > N]
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[Z > (1+\epsilon)\frac{N}{p^*}] = \textbf{Pr}[X <  N]
+\]
+
+Since $X$ and $Y$ are both sums of independent Bernoulli random variables, we can apply Chernoff. Let $t_x = \frac{\epsilon}{1 + \epsilon}$ and $t_y = \frac{\epsilon}{1 - \epsilon}$:
+
+\[
+\textbf{Pr}[A] = \textbf{Pr}[Y > N] = \textbf{Pr}[Y > (1+t_y)\Exp{Y}] \leq \exp{\frac{t_{y}^2\Exp{X}}{3}} = \exp{{\frac{-\epsilon^2N}{3(1 -\epsilon)}}} < \exp{{\frac{-\epsilon^2N}{3}}}
+\]
+\[
+\textbf{Pr}[B] = \textbf{Pr}[X <  N] = \textbf{Pr}[X < (1-t_x)\Exp{X}] \leq \exp{\frac{t_{x}^2\Exp{X}}{2}} = \exp{{\frac{-\epsilon^2N}{2(1 + \epsilon)}}} < \exp{{\frac{-\epsilon^2N}{3}}}
+\]
+where both of the last inequalities follow from the fact that $\epsilon \in (0,\frac{1}{2})$. Thus, we have shown that 
+
+\[
+\textbf{Pr}[Z \notin (1 \pm \epsilon)\Exp{Z}]=  \textbf{Pr}[A] + \textbf{Pr}[B] < 2\exp{{\frac{-\epsilon^2N}{3}}}
+\]
+\qed\\
+Qualitatively, we have now shown that if we flip our coin until we get more than $N=\frac{3}{\epsilon^2}\log{\frac{2}{\delta}} $ heads, then the number of tosses it will take will concentrate around $\Exp{Z} = \frac{N}{p^*}$ w.h.p. Note that this holds $\forall~\epsilon~\in~(0,\frac{1}{2})$. In our algorithm, we are going to restrict $\forall~\epsilon~\in~(0,\frac{1}{4})$. Note that our result in part b still holds for this restricted range of values on $\epsilon$. We can use this bound to now construct an estimator for $p^*$ which will also concentrate around the true value of $p^*$ w.h.p.
+
+\begin{answerbox}
+\begin{algorithmic}
+\Procedure{Estimate $p^*$}{$\epsilon_0$, $\delta$}
+\State Assert $\epsilon_0~\in~(0,\frac{1}{3})$
+\State $\epsilon = \frac{\epsilon_0}{1 + \epsilon_0}$ (Always less than $\frac{1}{2} \implies$ bound holds)
+\State Let $N > \frac{3}{\epsilon^2}\log{\frac{2}{\delta}}$
+
+\State Flip coin until $N$ heads appear, keeping a count of $\textbf{numFlips}$
+
+\State $\hat{p} = \frac{N}{numFlips}$
+
+\State \Return{$\hat{p}$}
+
+\EndProcedure
+\end{algorithmic}
+\end{answerbox}
+By flipping our coin until we see greater than $N = \frac{3}{\epsilon^2}\log{\frac{2}{\delta}}$ heads, we know:
+\[
+\textbf{Pr}[Z \in (1 \pm \epsilon)\frac{N}{p^*}] \geq 1- \delta
+\]
+Lets define our estimate $\hat{p} = \frac{N}{Z}$. We know that with probability at least $1-\delta$ (something large)
+\[
+\implies Z \leq (1 + \epsilon)\frac{N}{p^*} ~~~\&~~~ Z \geq (1 - \epsilon)\frac{N}{p^*}
+\]
+\[
+\implies p^* \leq (1 + \epsilon)\hat{p} ~~~\&~~~ p^* \geq (1 - \epsilon)\hat{p}
+\]
+\[
+\implies \frac{1}{1 + \epsilon}p^* \leq \hat{p} ~~~\&~~~ \frac{1}{1 - \epsilon}p^* \geq \hat{p}
+\]
+Note that the above inequalities hold $\forall~\epsilon~\in~(0,\frac{1}{2})$. Lets choose $\epsilon \in (0,\frac{1}{4})$ and define $\epsilon_0 = \frac{\epsilon}{1-\epsilon}$. NOTE that we have a degree of freedom over $\epsilon$ here because we proved a result about $Z$ which holds true $\forall~\epsilon~\in~(0,\frac{1}{2})$ and so it also will hold true for a smaller subset of values for $\epsilon$. With this clever construction of $\epsilon_0$, we see that $\epsilon_0$ lies between $(0,\frac{1}{3})$:
+\[
+\epsilon = 0 \implies \epsilon_0 = \frac{\epsilon}{1 - \epsilon} = 0
+\]
+\[
+\epsilon = \frac{1}{4} \implies \epsilon_0 = \frac{\epsilon}{1 - \epsilon} = \frac{1}{3}
+\]
+Note that $\epsilon$ cant equal $0$ or $\frac{1}{4}$ exactly but this analysis shows that $\epsilon_0 \in (0,\frac{1}{3})$. Next, we see that when we restrict $\epsilon \in (0,\frac{1}{4})$, we are able to bound the region where our estimate $\hat{p}$ will lie:
+
+\[
+(1-\epsilon_0) \leq \frac{1}{1 + \epsilon}
+\]
+\[
+\epsilon = 0 \implies 1 \leq 1
+\]
+\[
+\epsilon = \frac{1}{4} \implies \frac{2}{3} \leq \frac{4}{5}
+\]
+\[
+(1+\epsilon_0) \geq \frac{1}{1 - \epsilon}
+\]
+\[
+\epsilon = 0 \implies 1 \geq 1
+\]
+\[
+\epsilon = \frac{1}{4} \implies \frac{4}{3} \geq \frac{4}{3}
+\]
+Since $p^* > 0$, we can multiply these inequalities and preserve the ordering:
+\[
+(1-\epsilon_0)p^* \leq \frac{1}{1 + \epsilon}p^* \leq \hat{p}
+\]
+\[
+(1+\epsilon_0)p^* \geq \frac{1}{1 - \epsilon}p^* \geq \hat{p}
+\]
+Since the bounds on $Z$ hold with probability $1-\delta$, our estimate $\hat{p}$ falls in this range as well for any $\epsilon_0\in (0,\frac{1}{3})$
+
+\[
+\implies (1-\epsilon_0)p^* \leq \hat{p} \leq (1+\epsilon_0)p^* \qed
+\]
+
+
+\end{solution}
+\end{document}
